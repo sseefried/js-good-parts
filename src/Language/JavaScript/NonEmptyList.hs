@@ -1,3 +1,10 @@
+--
+--
+-- Author: Sean Seefried
+-- © 2012
+--
+-- Non-empty lists.
+--
 module Language.JavaScript.NonEmptyList (
  NonEmptyList,
  singleton, (<:>),

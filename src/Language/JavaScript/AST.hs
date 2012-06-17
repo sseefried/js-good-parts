@@ -13,8 +13,8 @@
 --
 -- Crockford presents the grammar as a series of railroad diagrams.
 -- The correspondence between the concrete grammar and the abstract grammar
--- is NOT one-to-one. However, the following property does hold: the pretty printing
--- of an abstract syntax tree will be parseable by the concrete grammar. i.e.
+-- in this module is NOT one-to-one. However, the following property does hold: the
+-- pretty printing of an abstract syntax tree will be parseable by the concrete grammar. i.e.
 -- For each valid program produced by the concrete grammar there is a corresponding
 -- abstract syntax tree that when pretty printed will produce that program (modulo whitespace).
 --
@@ -22,7 +22,6 @@
 --   * removes unnecessary characters such as parentheses (normal, curly and square)
 --   * represents JavaScript's string, name and number literals directly in Haskell as
 --     'String', 'String' and 'Double' respectively.
---
 --
 -- Conventions for concrete syntax:
 --  -  Non-terminals appear in angle brackets e.g. <JSName>
@@ -36,7 +35,7 @@
 -- The data structure ensures no incorrect JS:TGP programs
 -- -------------------------------------------------------
 -- This library was designed so that it would be impossible, save for name, string literals
--- to construct a JS:TGP program.
+-- to construct an incorrect JS:TGP program.
 --
 -- To this end some of the data structures may look like they contain redundancy.
 -- For instance, consider the 'JSESDelete' constructor which is defined
@@ -45,13 +44,12 @@
 --
 -- Why not just define it as 'JSESDelete JSExpression' since type 'JSExpression'
 -- has a constructor defined as 'JSExpressionInvocation JSExpression JSInvocation'?
--- The reason is that this would allow incorrect programs. A 'JSExpression' is not necessarily
--- an invocation.
---
+-- The reason is that this would allow incorrect programs. A 'JSExpression' is
+-- not necessarily an invocation.
 --
 -- A note on precedence of JavaScript operators
 -- --------------------------------------------
--- Although this might be hard to believe, the precedence of JavaScript operators is
+-- Interestingly, the precedence of JavaScript operators is
 -- not defined in the ECMAScript standard. The precedence used in this library comes from
 -- the Mozilla Developer's Network pages.
 -- (https://developer.mozilla.org/en/JavaScript/Reference/Operators/Operator_Precedence)
@@ -98,7 +96,7 @@
 --                        }
 --                      }
 --
--- 'f' is local i.e. it will not be in scope outside of the function body.
+-- 'f' is local. It will not be in scope outside of the function body.
 --
 module Language.JavaScript.AST (
   -- JSString, JSName can't be create except with constructors
