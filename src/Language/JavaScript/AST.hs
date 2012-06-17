@@ -48,6 +48,36 @@
 -- The reason is that this would allow incorrect programs. A 'JSExpression' is not necessarily
 -- an invocation.
 --
+--
+-- A note on precedence of JavaScript operators
+-- --------------------------------------------
+-- Although this might be hard to believe, the precedence of JavaScript operators is
+-- not defined in the ECMAScript standard. The precedence used in this library comes from
+-- the Mozilla Developer's Network pages.
+-- (https://developer.mozilla.org/en/JavaScript/Reference/Operators/Operator_Precedence)
+--
+-- I have not used the precise precedence numbers from that page since in this module
+-- a lower precedence means the operator binds more tightly (as opposed to the page where
+-- a higher precedence does the same). Also, we have need for less precedence values so they
+-- have been normalised to what we are using in JS:TGP
+--
+-- You will also note that we don't even consider the associativity/precedence of
+-- "=", "+=", "-=" etc. In JS:TGP the notion of expression statements is quite different
+-- to that of expressions. It simply isn't legal to write an expression statement like
+--
+--  (a += 2) -= 3
+--    OR
+--  a = (b = c) = (c = d)
+--
+-- although it is perfectly legal to write
+--
+--  a = b = c = d += 2
+--
+-- which if we add brackets to disambiguate is really
+--
+-- a = (b = (c = (d += 2)))
+--
+--
 -- Interesting aspects of "the good parts"
 -- ---------------------------------------
 --
@@ -86,7 +116,7 @@ module Language.JavaScript.AST (
   JSExpressionStatement(..), JSLValue(..), JSRValue(..), JSExpression(..),
   JSPrefixOperator(..), JSInfixOperator(..), JSInvocation(..), JSRefinement(..),
   JSLiteral(..), JSObjectLiteral(..), JSObjectField(..), JSArrayLiteral(..),
-  JSFunctionLiteral(..), JSFunctionBody(..),
+  JSFunctionLiteral(..), JSFunctionBody(..), JSProgram(..)
 ) where
 
 import Language.JavaScript.NonEmptyList
@@ -338,7 +368,6 @@ data JSRValue
   | JSRVSubAssign JSExpression
   | JSRVInvoke    (NonEmptyList JSInvocation)
 
-
 data JSExpression = JSExpressionLiteral    JSLiteral
                   | JSExpressionName       JSName
                   | JSExpressionPrefix     JSPrefixOperator JSExpression
@@ -436,3 +465,5 @@ data JSFunctionLiteral = JSFunctionLiteral (Maybe JSName) [JSName] JSFunctionBod
 --   { <JSVarStatement>+ <JSStatement>+ }
 --
 data JSFunctionBody = JSFunctionBody [JSVarStatement] [JSStatement]
+
+data JSProgram = JSProgram [JSVarStatement] [JSStatement]

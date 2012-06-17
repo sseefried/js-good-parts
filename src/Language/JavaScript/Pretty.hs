@@ -12,8 +12,6 @@ import Language.JavaScript.NonEmptyList
 instance Pretty JSString where
   pretty s = char '"' <> text (unJSString s) <> char '"' -- enclosed in double quotes
 
-
-
 instance Pretty JSName where
   pretty = text . unJSName
 
@@ -37,48 +35,72 @@ prettyBlock stmts = lbrace <$> indent 2 (endWith (semi <$> empty) stmts) <$> rbr
 -- Associativity
 --
 
-data Associativity = InfixL | InfixR | Infix deriving Eq
+data Associativity = LeftToRight | RightToLeft deriving Eq
 type Fixity = (Associativity, Int)
 
-infixA :: Associativity -> Int -> Fixity
-infixA ass n = (ass, n)
+assoc :: Associativity -> Int -> Fixity
+assoc ass n = (ass, n)
 
-infixL, infixR, infixN :: Int -> Fixity
+leftToRight, rightToLeft :: Int -> Fixity
 
-infixL = infixA InfixL
-infixR = infixA InfixR
-infixN = infixA Infix
+leftToRight = assoc LeftToRight
+rightToLeft = assoc RightToLeft
 
-prettyInfixOpApp :: (PrettyPrec a, PrettyPrec b) => Int -> InfixOpInfo -> a -> b -> Doc
-prettyInfixOpApp prec (InfixOpInfo opPrec assoc name) a b =
-  docParen (prec > opPrec) $ bump InfixL a <+> text name <+> bump InfixR b
+
+prettyInfixOpApp :: (PrettyPrec a, PrettyPrec b) => Int ->  OpInfo -> a -> b -> Doc
+prettyInfixOpApp prec (OpInfo opPrec assoc name) a b =
+  docParen (prec > opPrec) $ bump LeftToRight a <+> text name <+> bump RightToLeft b
   where
-    bump assoc' d = prettyPrec prec' d
-      where prec' = if assoc == assoc' then prec else prec + 1
+    bump assoc' d = prettyPrec opPrec' d
+      where opPrec' = if assoc == assoc' then opPrec else opPrec + 1
+
+-- LAST: Check that bump works in 'prettyInfixOpApp' and do the right thing for prefix ops.
+--
+prettyPrefixOpApp :: PrettyPrec a => Int -> OpInfo -> a -> Doc
+prettyPrefixOpApp prec (OpInfo opPrec assoc name) a =
+  text name <> docParen (prec > opPrec) (prettyPrec prec a)
+
 
 docParen :: Bool -> Doc -> Doc
 docParen True  = parens
 docParen False = id
 
-data InfixOpInfo = InfixOpInfo Int           -- precedence
-                               Associativity -- Associativity
-                               String        -- name
+data OpInfo = OpInfo Int           -- recedence
+                     Associativity -- associativity
+                     String        -- name
+--
+-- FIXME: What about the associativity of +=, -=, etc. It's not defined in your
+-- grammar. How will you handle it? Is it even defined in JS:TGP? Answer this question
+-- and then write a note about it.
+--
 
-infixOpInfo :: JSInfixOperator -> InfixOpInfo
+--
+-- Lower precedence means the operatorbinds more tightly
+--
+infixOpInfo :: JSInfixOperator -> OpInfo
 infixOpInfo op = case op of
-  JSMul   -> InfixOpInfo 7 Infix "*" -- FIXME: Not correct
-  JSDiv   -> InfixOpInfo 7 Infix "/" -- FIXME: Not correct
-  JSMod   -> InfixOpInfo 0 Infix "%" -- FIXME: Not correct
-  JSAdd   -> InfixOpInfo 6 Infix "+" -- FIXME: Not correct
-  JSSub   -> InfixOpInfo 6 Infix "-" -- FIXME: Not correct
-  JSGTE   -> InfixOpInfo 0 Infix ">=" -- FIXME: Not correct
-  JSLTE   -> InfixOpInfo 0 Infix "<=" -- FIXME: Not correct
-  JSGT    -> InfixOpInfo 0 Infix ">" -- FIXME: Not correct
-  JSLT    -> InfixOpInfo 0 Infix "<" -- FIXME: Not correct
-  JSEq    -> InfixOpInfo 0 Infix "===" -- FIXME: Not correct
-  JSNotEq -> InfixOpInfo 0 Infix "!==" -- FIXME: Not correct
-  JSOr    -> InfixOpInfo 0 Infix "||" -- FIXME: Not correct
-  JSAnd   -> InfixOpInfo 0 Infix "&&" -- FIXME: Not correct
+  JSMul   -> go 6 "*"
+  JSDiv   -> go 6 "/"
+  JSMod   -> go 6 "%"
+  JSAdd   -> go 5 "+"
+  JSSub   -> go 5 "-"
+  JSGTE   -> go 4 ">="
+  JSLTE   -> go 4 "<="
+  JSGT    -> go 4 ">"
+  JSLT    -> go 4 "<"
+  JSEq    -> go 3 "==="
+  JSNotEq -> go 3 "!=="
+  JSOr    -> go 1 "||"
+  JSAnd   -> go 2 "&&"
+ where go i s = OpInfo i LeftToRight s
+
+prefixOpInfo :: JSPrefixOperator -> OpInfo
+prefixOpInfo op = case op of
+  JSTypeOf   -> go 7 "typeof"
+  JSToNumber -> go 7 "+"
+  JSNegate   -> go 7 "-"
+  JSNot      -> go 7 "!"
+  where go i s = OpInfo i RightToLeft s
 
 -----------------------------------------------------------------------
 
@@ -100,7 +122,7 @@ instance PrettyPrec JSVarDecl -- default
 
 instance Pretty JSStatement where
   pretty stmt = case stmt of
-    (JSStatementExpression  es)  -> pretty es <+> semi
+    (JSStatementExpression  es)  -> pretty es <> semi
     (JSStatementDisruptive  ds)  -> pretty ds
     (JSStatementTry         ts)  -> pretty ts
     (JSStatementIf          is)  -> pretty is
@@ -309,6 +331,42 @@ instance PrettyPrec JSFunctionLiteral -- default
 
 instance Pretty JSFunctionBody        where
   pretty (JSFunctionBody varStmts stmts) =
-    lbrace <$> sepWith (semi <$> empty) varStmts <$> sepWith (semi <$> empty) stmts <$> rbrace
+    lbrace <$>
+    indent 2 (sepWith (semi <$> empty) (map pretty varStmts ++ map pretty stmts)) <$>
+    rbrace
 
 instance PrettyPrec JSFunctionBody -- default
+
+instance Pretty JSProgram where
+  pretty (JSProgram varStmts stmts) = vcat (map pretty varStmts ++ map pretty stmts)
+
+------------------------
+
+
+test1 = add (n 1) (add (n 2) (add (add (n 3) (n 4)) (n 5)))
+
+test2  = add (n 1) (mul (n 2) (n 3))
+test2' = ((n 1) `add` (n 2)) `mul` (n 3)
+
+test3 :: JSExpressionStatement
+test3 = case jsName "x" of
+  Right nm ->
+    case jsName "y" of
+      Right nm' -> JSESApply ((JSLValue nm' []) <:> singleton (JSLValue nm []))
+                     (JSRVAssign test2')
+
+
+test4 :: JSStatement
+test4 = JSStatementExpression test3
+
+-- test4a = JSStatement
+
+test5 :: JSProgram
+test5 = JSProgram [] [test4, test4]
+
+test6 :: JSFunctionLiteral
+test6 = JSFunctionLiteral Nothing [] (JSFunctionBody [] [test4])
+
+add e e' = JSExpressionInfix JSAdd e e'
+mul e e' = JSExpressionInfix JSMul e e'
+n x = JSExpressionLiteral (JSLiteralNumber (JSNumber x))
