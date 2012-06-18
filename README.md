@@ -28,11 +28,13 @@ to construct an incorrect JS:TGP program.
 To this end some of the data structures may look like they contain redundancy.
 For instance, consider the 'JSESDelete' constructor which is defined
 
+```haskell
 JSESDelete JSExpression JSInvocation
+```
 
-Why not just define it as 'JSESDelete JSExpression' since type 'JSExpression'
-has a constructor defined as 'JSExpressionInvocation JSExpression JSInvocation'?
-The reason is that this would allow incorrect programs. A 'JSExpression' is
+Why not just define it as `JSESDelete JSExpression` since type `JSExpression`
+has a constructor defined as `JSExpressionInvocation JSExpression JSInvocation`?
+The reason is that this would allow incorrect programs. A `JSExpression` is
 not necessarily an invocation.
 
 However, even though none of the programs are incorrect there are still some things
@@ -84,7 +86,7 @@ A JS:TGP program is a collection of statements. You'll note that there is no
 statement to declare a function in JS:TGP. However you can assign a function literal
 to a variable.
 
-e.g. `var fun = function(x) { return x + 1;}`
+e.g. ```var fun = function(x) { return x + 1;}```
 
 What about recursive functions then? There is the option to give the function a name which is
 local to the literal.
@@ -101,4 +103,4 @@ var factorial = function f(n) {
                      }
 ```
 
-'f' is local. It will not be in scope outside of the function body.
+`f` is local. It will not be in scope outside of the function body.
