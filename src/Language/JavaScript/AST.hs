@@ -47,6 +47,12 @@
 -- The reason is that this would allow incorrect programs. A 'JSExpression' is
 -- not necessarily an invocation.
 --
+-- However, even though none of the programs are incorrect there are still some things
+-- it cannot check for. Although labels can appear before any statement, they should
+-- only be used on statements that interact with a switch, while, do, or for statement.
+-- This cannot be checked except by a second pass over the AST. This library does not
+-- provide this functionality.
+--
 -- A note on precedence of JavaScript operators
 -- --------------------------------------------
 -- Interestingly, the precedence of JavaScript operators is
