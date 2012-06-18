@@ -5,8 +5,7 @@
 In Chapter 2 of "JavaScript: The Good Parts", Douglas Crockford presents a
 concrete grammar for "the good parts" of JavaScript.
 
-This module provides an abstract grammar for those good parts. We will abbreviate this
-language to JS:TGP
+This package provides an abstract grammar and pretty printer for those good parts. We will abbreviate this language to JS:TGP.
 
 Crockford presents the grammar as a series of railroad diagrams.
 The correspondence between the concrete grammar and the abstract grammar
