@@ -1,11 +1,12 @@
 Name:                js-good-parts
 Version:             0.0.1
 Cabal-Version:       >= 1.6
-Synopsis:            Javascript -- The Good Parts AST & Pretty Printer
+Synopsis:            Javascript: The Good Parts -- AST & Pretty Printer
 Category:            Language, Javascript
 Description:
-  An AST for the "the good parts" of Javascript and a pretty printer for that AST. Designed
-  to be the target of a code generator. Does not include a parser.
+  An AST for the "the good parts" of Javascript (as defined by Douglas Crockford) 
+  and a pretty printer for that AST. Designed to be the target of a code generator.
+  Does not include a parser.
 
 Author:              Sean Seefried
 Maintainer:          sean.seefried@gmail.com
