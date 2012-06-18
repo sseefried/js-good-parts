@@ -57,18 +57,26 @@ You will also note that we don't even consider the associativity/precedence of
 "=", "+=", "-=" etc. In JS:TGP the notion of expression statements is quite different
 to that of expressions. It simply isn't legal to write an expression statement like
 
- (a += 2) -= 3
-   OR
+```javascript
+(a += 2) -= 3
+```
+
+or
+
+```javascript
  a = (b = c) = (c = d)
+```
 
 although it is perfectly legal to write
 
+```javascript
  a = b = c = d += 2
-
+```
 which if we add brackets to disambiguate is really
 
+```javascript
 a = (b = (c = (d += 2)))
-
+```
 
 ## Interesting aspects of "the good parts"
 
@@ -76,17 +84,21 @@ A JS:TGP program is a collection of statements. You'll note that there is no
 statement to declare a function in JS:TGP. However you can assign a function literal
 to a variable.
 
-e.g. var fun = function(x) { return x + 1;}
+e.g. `var fun = function(x) { return x + 1;}`
 
 What about recursive functions then? There is the option to give the function a name which is
 local to the literal.
 
-e.g. var factorial = function f(n) {
+e.g. 
+
+```javascript
+var factorial = function f(n) {
                        if ( n > 0 ) {
                          return n * f(n - 1);
                        } else {
                          return 1;
                        }
                      }
+```
 
 'f' is local. It will not be in scope outside of the function body.
