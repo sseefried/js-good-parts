@@ -1,15 +1,15 @@
-Name:                js-tgp
+Name:                js-good-parts
 Version:             0.0.1
 Cabal-Version:       >= 1.6
 Synopsis:            Javascript -- The Good Parts AST & Pretty Printer
 Category:            Language, Javascript
 Description:
-  An AST for the "good parts" of Javascript and a pretty printer for that AST
-
+  An AST for the "the good parts" of Javascript and a pretty printer for that AST. Designed
+  to be the target of a code generator. Does not include a parser.
 
 Author:              Sean Seefried
 Maintainer:          sean.seefried@gmail.com
-Homepage:            http://github.com/sseefried/js-tgp.git
+Homepage:            http://github.com/sseefried/js-good-parts.git
 Copyright:           (c) by Sean Seefried
 License:             BSD3 
 License-File:        LICENSE
