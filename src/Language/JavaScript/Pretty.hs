@@ -94,14 +94,6 @@ infixOpInfo op = case op of
   JSAnd   -> go 2 "&&"
  where go i s = OpInfo i LeftToRight s
 
-prefixOpInfo :: JSPrefixOperator -> OpInfo
-prefixOpInfo op = case op of
-  JSTypeOf   -> go 7 "typeof"
-  JSToNumber -> go 7 "+"
-  JSNegate   -> go 7 "-"
-  JSNot      -> go 7 "!"
-  where go i s = OpInfo i RightToLeft s
-
 -----------------------------------------------------------------------
 
 instance Pretty JSNumber where
