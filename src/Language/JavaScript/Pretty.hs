@@ -1,4 +1,7 @@
-module Language.JavaScript.Pretty where
+module Language.JavaScript.Pretty (
+ -- | This module just defines and exports 'Pretty' and 'PrettyPrec' instances
+
+) where
 
 -- System libraries
 import Text.PrettyPrint.Leijen
