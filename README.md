@@ -19,12 +19,12 @@ The abstract grammar:
   * represents JavaScript's string, name and number literals directly in Haskell as
     'String', 'String' and 'Double' respectively.
 
-## The data structure ensures no incorrect JS:TGP programs
+## Correct by construction
 
-This library was designed so that it would be impossible, save for name, string literals
-to construct an incorrect JS:TGP program.
+This library was designed so that it would be impossible (save for name and string literals)
+to construct an incorrect JS:TGP program. To this end some of the data structures may look like
+they contain redundancy.
 
-To this end some of the data structures may look like they contain redundancy.
 For instance, consider the 'JSESDelete' constructor which is defined
 
 ```haskell
@@ -36,21 +36,19 @@ has a constructor defined as `JSExpressionInvocation JSExpression JSInvocation`?
 The reason is that this would allow incorrect programs. A `JSExpression` is
 not necessarily an invocation.
 
-## A note on precedence of JavaScript operators
+## Precedence of JavaScript operators
 
 Interestingly, the precedence of JavaScript operators is
-not defined in the ECMAScript standard. The precedence used in this library comes from
+not defined in the ECMAScript standard. The precedence used in this library was guided by a page on 
 the Mozilla Developer's Network pages.
 (https://developer.mozilla.org/en/JavaScript/Reference/Operators/Operator_Precedence)
 
-I have not used the precise precedence numbers from that page since in this module
-a lower precedence means the operator binds more tightly (as opposed to the page where
-a higher precedence does the same). Also, we have need for less precedence values so they
-have been normalised to what we are using in JS:TGP
+The precise precedence numbers from that page were not used but they have been stratified into
+the same groups.
 
-You will also note that we don't even consider the associativity/precedence of
-"=", "+=", "-=" etc. In JS:TGP the notion of expression statements is quite different
-to that of expressions. It simply isn't legal to write an expression statement like
+Interestingly, we don't even need to consider the associativity/precedence of
+"=", "+=", "-=" etc. In JS:TGP the notion of *expression statements* is quite different
+to that of *expressions*. It simply isn't legal to write an expression statement like
 
 ```javascript
 (a += 2) -= 3
@@ -75,6 +73,8 @@ a = (b = (c = (d += 2)))
 
 ## Interesting aspects of "the good parts"
 
+### Functions are not declared; they are values
+
 A JS:TGP program is a collection of statements. You'll note that there is no
 statement to declare a function in JS:TGP. However you can assign a function literal
 to a variable.
@@ -97,3 +97,4 @@ var factorial = function f(n) {
 ```
 
 `f` is local. It will not be in scope outside of the function body.
+

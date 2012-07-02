@@ -56,10 +56,3 @@ instance PrettyPrec a => PrettyPrec (Maybe a) where
 
 instance (Integral a, Show a) => PrettyPrec (Ratio a) where
   prettyPrec = const (text . show)
-
-{--------------------------------------------------------------------
-    'Show' helpers
---------------------------------------------------------------------}
-
-pageWidth :: Int
-pageWidth = 80

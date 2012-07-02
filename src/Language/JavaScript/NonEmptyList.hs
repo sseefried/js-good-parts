@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 --
 --
 -- Author: Sean Seefried

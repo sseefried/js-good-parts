@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 module Language.JavaScript.Pretty (
  -- | This module just defines and exports 'Pretty' and 'PrettyPrec' instances
  Pretty(..)
@@ -27,9 +28,6 @@ endWith s xs = sepWith s xs <> s
 sepWith' :: Pretty a => Doc -> NonEmptyList a -> Doc
 sepWith' s = encloseSep empty empty s . map pretty . toList
 
-endWith' :: Pretty a => Doc -> NonEmptyList a -> Doc
-endWith' s xs = sepWith' s xs <> s
-
 prettyBlock :: Pretty a => [a] -> Doc
 prettyBlock stmts = lbrace <$> indent 2 (endWith (semi <$> empty) stmts) <$> rbrace
 
@@ -39,15 +37,6 @@ prettyBlock stmts = lbrace <$> indent 2 (endWith (semi <$> empty) stmts) <$> rbr
 --
 
 data Associativity = LeftToRight | RightToLeft deriving Eq
-type Fixity = (Associativity, Int)
-
-assoc :: Associativity -> Int -> Fixity
-assoc ass n = (ass, n)
-
-leftToRight, rightToLeft :: Int -> Fixity
-
-leftToRight = assoc LeftToRight
-rightToLeft = assoc RightToLeft
 
 
 prettyInfixOpApp :: (PrettyPrec a, PrettyPrec b) => Int ->  OpInfo -> a -> b -> Doc
@@ -56,13 +45,6 @@ prettyInfixOpApp prec (OpInfo opPrec assoc name) a b =
   where
     bump assoc' d = prettyPrec opPrec' d
       where opPrec' = if assoc == assoc' then opPrec else opPrec + 1
-
--- LAST: Check that bump works in 'prettyInfixOpApp' and do the right thing for prefix ops.
---
-prettyPrefixOpApp :: PrettyPrec a => Int -> OpInfo -> a -> Doc
-prettyPrefixOpApp prec (OpInfo opPrec assoc name) a =
-  text name <> docParen (prec > opPrec) (prettyPrec prec a)
-
 
 docParen :: Bool -> Doc -> Doc
 docParen True  = parens
@@ -111,7 +93,7 @@ instance PrettyPrec JSVarStatement -- default
 
 instance Pretty JSVarDecl where
   pretty (JSVarDecl nm Nothing)    = pretty nm
-  pretty (JSVarDecl nm (Just exp)) = pretty nm <+> text "=" <+> pretty exp
+  pretty (JSVarDecl nm (Just exp')) = pretty nm <+> text "=" <+> pretty exp'
 
 instance PrettyPrec JSVarDecl -- default
 
@@ -170,15 +152,17 @@ instance Pretty JSCaseAndDisruptive where
 instance PrettyPrec JSCaseAndDisruptive -- default
 
 instance Pretty JSCaseClause where
-  pretty (JSCaseClause exp stmts) =
-    text "case" <+> pretty exp <> colon <+> endWith semi stmts
+  pretty (JSCaseClause exp' stmts) =
+    text "case" <+> pretty exp' <> colon <+> endWith semi stmts
 
 instance PrettyPrec JSCaseClause -- default
 
 instance Pretty JSForStatement where
-  pretty (JSForStatementCStyle init cond incr stmts) =
-    text "for" <+> parens (pretty init <> semi <+> pretty cond <> semi <+>
+  pretty (JSForStatementCStyle init_ cond incr stmts) =
+    text "for" <+> parens (pretty init_ <> semi <+> pretty cond <> semi <+>
                            pretty incr) <+> prettyBlock stmts
+  pretty (JSForStatementInStyle name exp' stmts) =
+    text "for" <+> parens (pretty name <+> text "in" <+> pretty exp') <+> prettyBlock stmts
 
 instance PrettyPrec JSForStatement -- default
 
@@ -202,30 +186,30 @@ instance Pretty JSTryStatement where
 instance PrettyPrec JSTryStatement -- default
 
 instance Pretty JSThrowStatement where
-  pretty (JSThrowStatement exp) =
-    text "throw" <+> pretty exp <> semi
+  pretty (JSThrowStatement exp_) =
+    text "throw" <+> pretty exp_ <> semi
 
 instance PrettyPrec JSThrowStatement -- default
 
 instance Pretty JSReturnStatement where
   pretty (JSReturnStatement mbExp) = case mbExp of
     Nothing  -> text "return;"
-    Just exp -> text "return" <+> pretty exp <> semi
+    Just exp_ -> text "return" <+> pretty exp_ <> semi
 
 instance PrettyPrec JSReturnStatement -- default
 
 instance Pretty JSBreakStatement      where
   pretty (JSBreakStatement mbExp) = case mbExp of
     Nothing  -> text "break;"
-    Just exp -> text "break" <+> pretty exp <> semi
+    Just exp_ -> text "break" <+> pretty exp_ <> semi
 
 instance PrettyPrec JSBreakStatement -- default
 
 instance Pretty JSExpressionStatement where
   pretty (JSESApply lvalues rvalue) =
     sepWith' (space <> text "=" <> space) lvalues <+> pretty rvalue
-  pretty (JSESDelete exp refine) =
-    text "delete" <+> pretty exp <> pretty refine
+  pretty (JSESDelete exp_ refine) =
+    text "delete" <+> pretty exp_ <> pretty refine
 
 instance PrettyPrec JSExpressionStatement -- default
 
@@ -249,16 +233,16 @@ instance Pretty JSExpression          where
   pretty = prettyPrec 0
 
 instance PrettyPrec JSExpression where
-  prettyPrec i exp = case exp of
+  prettyPrec i exp_ = case exp_ of
     JSExpressionLiteral literal      -> pretty literal
     JSExpressionName name            -> pretty name
     JSExpressionPrefix prefixOp e    -> pretty prefixOp <> pretty e
     JSExpressionInfix infixOp e e'   -> prettyInfixOpApp i (infixOpInfo infixOp) e e'
     JSExpressionTernary cond thn els ->
       pretty cond <+> char '?' <+> pretty thn <+> colon <+> pretty els
-    JSExpressionInvocation e i       -> pretty e <> pretty i
+    JSExpressionInvocation e i'       -> pretty e <> pretty i'
     JSExpressionRefinement e r       -> pretty e <> pretty r
-    JSExpressionNew e i              -> text "new" <+> pretty e <> pretty i
+    JSExpressionNew e i'              -> text "new" <+> pretty e <> pretty i'
     JSExpressionDelete e r           -> text "new" <+> pretty e <> pretty r
 
 instance Pretty JSPrefixOperator      where
@@ -290,6 +274,7 @@ instance PrettyPrec JSRefinement -- default
 instance Pretty JSLiteral             where
   pretty lit = case lit of
     JSLiteralNumber n   -> pretty n
+    JSLiteralBool   b   -> pretty b
     JSLiteralString s   -> pretty s
     JSLiteralObject o   -> pretty o
     JSLiteralArray  a   -> pretty a
@@ -337,7 +322,7 @@ instance Pretty JSProgram where
 
 ------------------------
 
-
+{-
 test1 = add (n 1) (add (n 2) (add (add (n 3) (n 4)) (n 5)))
 
 test2  = add (n 1) (mul (n 2) (n 3))
@@ -365,3 +350,4 @@ test6 = JSFunctionLiteral Nothing [] (JSFunctionBody [] [test4])
 add e e' = JSExpressionInfix JSAdd e e'
 mul e e' = JSExpressionInfix JSMul e e'
 n x = JSExpressionLiteral (JSLiteralNumber (JSNumber x))
+-}
