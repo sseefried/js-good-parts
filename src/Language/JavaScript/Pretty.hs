@@ -1,6 +1,6 @@
 module Language.JavaScript.Pretty (
  -- | This module just defines and exports 'Pretty' and 'PrettyPrec' instances
-
+ Pretty(..)
 ) where
 
 -- System libraries
@@ -105,7 +105,7 @@ instance Pretty JSNumber where
 instance PrettyPrec JSNumber -- default
 
 instance Pretty JSVarStatement where
-  pretty (JSVarStatement varDecls) = sepWith' (text ", ") varDecls
+  pretty (JSVarStatement varDecls) = sepWith' (comma <+> empty) varDecls
 
 instance PrettyPrec JSVarStatement -- default
 
@@ -277,7 +277,7 @@ instance PrettyPrec JSInfixOperator where
   prettyPrec = error "we never print an operator by itself"
 
 instance Pretty JSInvocation          where
-  pretty = error "undefined"
+  pretty (JSInvocation es) = lparen <> sepWith (comma <+> empty) es <> rparen
 
 instance PrettyPrec JSInvocation -- default
 
@@ -311,7 +311,7 @@ instance Pretty JSObjectField         where
 instance PrettyPrec JSObjectField -- default
 
 instance Pretty JSArrayLiteral        where
-  pretty (JSArrayLiteral es) = sepWith (comma <+> empty) es
+  pretty (JSArrayLiteral es) = lbracket <> sepWith (comma <+> empty) es <> rbracket
 
 instance PrettyPrec JSArrayLiteral -- default
 

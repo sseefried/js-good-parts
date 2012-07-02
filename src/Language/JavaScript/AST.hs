@@ -561,8 +561,16 @@ data JSRefinement
   = JSProperty  JSName
   | JSSubscript JSExpression
 
+--
+-- | Interestingly, the syntax diagrams presented in the book don't include
+--   boolean literals. I can only assume this is an oversight as they
+--   are used throughout the book.
+--
+
+
 data JSLiteral
   = JSLiteralNumber   JSNumber          -- ^ @\<JSNumber\>@
+  | JSLiteralBool     Bool              -- ^ @\<true | false\>@
   | JSLiteralString   JSString          -- ^ @\<JSString\>@
   | JSLiteralObject   JSObjectLiteral   -- ^ @\<JSObjectLiteral\>@
   | JSLiteralArray    JSArrayLiteral    -- ^ @\<JSArrayLiteral\>@
