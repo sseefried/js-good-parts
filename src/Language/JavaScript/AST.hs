@@ -27,28 +27,28 @@
 --
 -- /Conventions for concrete syntax/
 --
---  *  Non-terminals appear in angle brackets e.g. \<JSName\>
+--  *  Non-terminals appear in angle brackets e.g. \<Name\>
 --
---  *  ? means zero or one. e.g. \<JSExpression\>?
+--  *  ? means zero or one. e.g. \<Expr\>?
 --
---  *  * means zero or more e.g. \<JSStatement\>*
+--  *  * means zero or more e.g. \<Stmt\>*
 --
---  *  + means one  or more e.g. \<JSStatement\>+
+--  *  + means one  or more e.g. \<Stmt\>+
 --
 --  *  \( \) are meta-brackets used to enclose a concrete-syntax expression so that ?,* or +
---     can be applied. e.g. \(= \<JSExpression\>\)*
---     This means zero or more repetitions of: = \<JsExpression\>
+--     can be applied. e.g. \(= \<Expr\>\)*
+--     This means zero or more repetitions of: = \<Expr\>
 --
 -- This library was designed so that it would be impossible, save for name, string literals
 -- to construct an incorrect JS:TGP program. To this end some of the data structures may look like
--- they contain redundancy. For instance, consider the 'JSESDelete' constructor which is defined
+-- they contain redundancy. For instance, consider the 'ESDelete' constructor which is defined
 --
--- @JSESDelete JSExpression JSInvocation@
+-- @ESDelete Expr Invocation@
 --
--- Why not just define it as @JSESDelete JSExpression@ since type @JSExpression@
--- has a constructor defined as @JSExpressionInvocation JSExpression JSInvocation@?
--- The reason is that this would allow incorrect programs. A 'JSExpression' is
--- not necessarily a 'JSInvocation'.
+-- Why not just define it as @ESDelete Expr@ since type @Expr@
+-- has a constructor defined as @ExprInvocation Expr Invocation@?
+-- The reason is that this would allow incorrect programs. A 'Expr' is
+-- not necessarily a 'Invocation'.
 --
 -- /A note on precedence of JavaScript operators/
 --
@@ -109,36 +109,36 @@
 -- @f@ is local. It will not be in scope outside of the function body.
 --
 module Language.JavaScript.AST (
-  -- JSString, JSName can't be create except with constructors
-  JSString, JSName, 
-  unJSString, unJSName,
-  jsString, jsName,
+  -- String, Name can't be create except with constructors
+  JSString, Name, 
+  unString, unName,
+  jsString, name,
    
   -- * Data types
-  JSNumber(..),
-  JSVarStatement(..), JSVarDecl(..), JSStatement(..),
-  JSDisruptiveStatement(..), JSIfStatement(..), JSSwitchStatement(..),
-  JSCaseAndDisruptive(..), JSCaseClause(..), JSForStatement(..),
-  JSDoStatement(..), JSWhileStatement(..), JSTryStatement(..),
-  JSThrowStatement(..), JSReturnStatement(..), JSBreakStatement(..),
-  JSExpressionStatement(..), JSLValue(..), JSRValue(..), JSExpression(..),
-  JSPrefixOperator(..), JSInfixOperator(..), JSInvocation(..), JSRefinement(..),
-  JSLiteral(..), JSObjectLiteral(..), JSObjectField(..), JSArrayLiteral(..),
-  JSFunctionLiteral(..), JSFunctionBody(..), JSProgram(..)
+  Number(..),
+  VarStmt(..), VarDecl(..), Stmt(..),
+  DisruptiveStmt(..), IfStmt(..), SwitchStmt(..),
+  CaseAndDisruptive(..), CaseClause(..), ForStmt(..),
+  DoStmt(..), WhileStmt(..), TryStmt(..),
+  ThrowStmt(..), ReturnStmt(..), BreakStmt(..),
+  ExprStmt(..), LValue(..), RValue(..), Expr(..),
+  PrefixOperator(..), InfixOperator(..), Invocation(..), Refinement(..),
+  Lit(..), ObjectLit(..), ObjectField(..), ArrayLit(..),
+  FnLit(..), FnBody(..), Program(..)
 ) where
 
 import Language.JavaScript.NonEmptyList
 
 
-data JSName = JSName { unJSName :: String }
+data Name = Name { unName :: String }
 
 --
--- | 'jsName' is the only way you can create a JSName
+-- | 'jsName' is the only way you can create a Name
 --
-jsName :: String -> Either String JSName
-jsName = Right . JSName -- FIXME: Return Left on error.
+name :: String -> Either String Name
+name = Right . Name -- FIXME: Return Left on error.
 
-data JSString = JSString { unJSString :: String }
+data JSString = JSString { unString :: String }
 
 --
 -- | The only way you can create a Javascript string.
@@ -149,7 +149,7 @@ jsString :: String -> Either String JSString
 jsString = Right . JSString -- FIXME: Return Left on error
 
 
-newtype JSNumber = JSNumber Double -- 64 bit floating point number
+newtype Number = Number Double -- 64 bit floating point number
 
 --
 -- | Concrete syntax:
@@ -158,12 +158,12 @@ newtype JSNumber = JSNumber Double -- 64 bit floating point number
 --
 -- e.g. @var x = 1, y;@
 --
-data JSVarStatement = JSVarStatement (NonEmptyList JSVarDecl)
+data VarStmt = VarStmt (NonEmptyList VarDecl)
 
 --
 -- | Concrete syntax:
 --
---   1. @\<JSName\> \(= \<JSExpression\>\)?@
+--   1. @\<Name\> \(= \<Expr\>\)?@
 --
 -- e.g.
 --
@@ -171,46 +171,46 @@ data JSVarStatement = JSVarStatement (NonEmptyList JSVarDecl)
 --
 -- 2. @x = 2 + y@
 --
-data JSVarDecl = JSVarDecl JSName (Maybe JSExpression) -- optional initialization
+data VarDecl = VarDecl Name (Maybe Expr) -- optional initialization
 
 --
 -- | The many different kinds of statements
 --
-data JSStatement
-  = JSStatementExpression   JSExpressionStatement -- ^ @\<JSExpressionStatement\>;@
-  | JSStatementDisruptive  JSDisruptiveStatement -- ^ @\<JSDisruptiveStatement\>@
-  | JSStatementTry         JSTryStatement        -- ^ @\<JSTryStatement\>@
-  | JSStatementIf          JSIfStatement         -- ^ @\<JSIfStatement\>@
+data Stmt
+  = StmtExpr   ExprStmt -- ^ @\<ExprStmt\>;@
+  | StmtDisruptive  DisruptiveStmt -- ^ @\<DisruptiveStmt\>@
+  | StmtTry         TryStmt        -- ^ @\<TryStmt\>@
+  | StmtIf          IfStmt         -- ^ @\<IfStmt\>@
 
-  -- | @\(\<JSName\> : \) \<JSSwitchStatement\>@
-  | JSStatementSwitch      (Maybe JSName) JSSwitchStatement
-  -- | @\(\<JSName\> : \) \<JSWhileStatement\>@
-  | JSStatementWhile       (Maybe JSName) JSWhileStatement
-  -- | @\(\<JSName\> : \) \<JSForStatement\>@
-  | JSStatementFor         (Maybe JSName) JSForStatement
-  -- | @\(\<JSName\> : \) \<JSDoStatement\>@
-  | JSStatementDo          (Maybe JSName) JSDoStatement
+  -- | @\(\<Name\> : \) \<SwitchStmt\>@
+  | StmtSwitch      (Maybe Name) SwitchStmt
+  -- | @\(\<Name\> : \) \<WhileStmt\>@
+  | StmtWhile       (Maybe Name) WhileStmt
+  -- | @\(\<Name\> : \) \<ForStmt\>@
+  | StmtFor         (Maybe Name) ForStmt
+  -- | @\(\<Name\> : \) \<DoStmt\>@
+  | StmtDo          (Maybe Name) DoStmt
 
 --
 -- | Disruptive statements
 --
-data JSDisruptiveStatement
-  = JSDSBreak   JSBreakStatement  -- ^ @\<JSBreakStatement\>@
-  | JSDSReturn  JSReturnStatement -- ^ @syntax: \<JSReturnStatement\>@
-  | JSDSThrow   JSThrowStatement  -- ^ @syntax: \<JSThrowStatement\>@
+data DisruptiveStmt
+  = DSBreak   BreakStmt  -- ^ @\<BreakStmt\>@
+  | DSReturn  ReturnStmt -- ^ @syntax: \<ReturnStmt\>@
+  | DSThrow   ThrowStmt  -- ^ @syntax: \<ThrowStmt\>@
 
 --
 -- | Concrete syntax:
 --
--- @if ( \<JSExpression\> ) { \<JSStatement\>* }@                        -- for 'Nothing'
+-- @if ( \<Expr\> ) { \<Stmt\>* }@                        -- for 'Nothing'
 --
 -- or
 --
--- @if ( \<JSExpression\> ) { \<JSStatement\>* } else { \<JSStatement\>* }@ -- for 'Just . Left'
+-- @if ( \<Expr\> ) { \<Stmt\>* } else { \<Stmt\>* }@ -- for 'Just . Left'
 --
 -- or
 --
--- @if ( \<JSExpression\> ) { \<JSStatement\>* } else \<JSIfStatement\>@    -- for 'Just . Right'
+-- @if ( \<Expr\> ) { \<Stmt\>* } else \<IfStmt\>@    -- for 'Just . Right'
 --
 --   e.g.
 --
@@ -220,22 +220,22 @@ data JSDisruptiveStatement
 --
 -- 3. @if (x > 0) { y = 20; } else if ( x > 10) { y = 30; } else { y = 10; }@
 --
-data JSIfStatement = JSIfStatement JSExpression
-                                   [JSStatement]
-                                   (Maybe (Either [JSStatement] JSIfStatement))
+data IfStmt = IfStmt Expr
+                                   [Stmt]
+                                   (Maybe (Either [Stmt] IfStmt))
 
 
 --
 -- | Concrete syntax:
 --
--- @switch ( \<JSExpression\> ) { \<JSCaseClause\> }@
+-- @switch ( \<Expr\> ) { \<CaseClause\> }@
 --
 -- or
 --
 -- @
--- switch ( \<JSExpression\> ) {
---  \<JSCaseAndDisruptive\>+
---  default : \<JSStatement\>*
+-- switch ( \<Expr\> ) {
+--  \<CaseAndDisruptive\>+
+--  default : \<Stmt\>*
 -- }
 -- @
 --
@@ -265,12 +265,12 @@ data JSIfStatement = JSIfStatement JSExpression
 -- }
 -- @
 --
-data JSSwitchStatement
-  = JSSwitchStatementSingleCase JSExpression JSCaseClause
-  | JSSwitchStatement           JSExpression
-                                (NonEmptyList JSCaseAndDisruptive)
+data SwitchStmt
+  = SwitchStmtSingleCase Expr CaseClause
+  | SwitchStmt           Expr
+                                (NonEmptyList CaseAndDisruptive)
                                 --  ^ non-default case clauses
-                                [JSStatement]
+                                [Stmt]
                                 -- ^ default clause statements
 
 --
@@ -278,7 +278,7 @@ data JSSwitchStatement
 --
 --   Concrete syntax:
 --
---  @\<JSCaseClause\> \<JSDisruptiveStatement\>@
+--  @\<CaseClause\> \<DisruptiveStmt\>@
 --
 --   e.g.
 --
@@ -289,12 +289,12 @@ data JSSwitchStatement
 --   break;
 -- @
 --
-data JSCaseAndDisruptive = JSCaseAndDisruptive JSCaseClause JSDisruptiveStatement
+data CaseAndDisruptive = CaseAndDisruptive CaseClause DisruptiveStmt
 
 --
 -- | Concrete syntax:
 --
--- @case \<JSExpression\> : \<JSStatement\>*@
+-- @case \<Expr\> : \<Stmt\>*@
 --
 -- e.g.
 --
@@ -309,7 +309,7 @@ data JSCaseAndDisruptive = JSCaseAndDisruptive JSCaseClause JSDisruptiveStatemen
 --   y = 1;
 -- @
 --
-data JSCaseClause = JSCaseClause JSExpression [JSStatement]
+data CaseClause = CaseClause Expr [Stmt]
 
 --
 -- | Two style of for-statements -- C-style and In-style.
@@ -319,16 +319,16 @@ data JSCaseClause = JSCaseClause JSExpression [JSStatement]
 -- 1.
 --
 -- @
--- for (\<JSExpressionStatement\>? ; \<JSExpression\>? ; \<JSExpressionStatement\>? ) {
---   \<JSStatement\>*
+-- for (\<ExprStmt\>? ; \<Expr\>? ; \<ExprStmt\>? ) {
+--   \<Stmt\>*
 -- }
 -- @
 --
 -- 2.
 --
 -- @
--- for ( \<JSName\> in \<JSExpression\> ) {
---   \<JSStatement\>*
+-- for ( \<Name\> in \<Expr\> ) {
+--   \<Stmt\>*
 -- }
 -- @
 --
@@ -348,48 +348,48 @@ data JSCaseClause = JSCaseClause JSExpression [JSStatement]
 --
 -- 4. @for ( i in indices ) { a[i] = 66; }@
 --
-data JSForStatement = JSForStatementCStyle
-                        (Maybe JSExpressionStatement)
-                        (Maybe JSExpression)
-                        (Maybe JSExpressionStatement)
-                        [JSStatement]
-                    | JSForStatementInStyle
-                        JSName
-                        JSExpression
-                        [JSStatement]
+data ForStmt = ForStmtCStyle
+                        (Maybe ExprStmt)
+                        (Maybe Expr)
+                        (Maybe ExprStmt)
+                        [Stmt]
+                    | ForStmtInStyle
+                        Name
+                        Expr
+                        [Stmt]
 
 --
 -- | Concrete syntax:
 --
--- @do { \<JSStatement\>* } while ( \<JSExpression\> );@
+-- @do { \<Stmt\>* } while ( \<Expr\> );@
 --
-data JSDoStatement = JSDoStatement [JSStatement] JSExpression
+data DoStmt = DoStmt [Stmt] Expr
 
 --
 -- | Concrete syntax:
 --
--- @while ( \<JSExpression\>) { \<JSStatement\>* }@
+-- @while ( \<Expr\>) { \<Stmt\>* }@
 --
-data JSWhileStatement = JSWhileStatement JSExpression [JSStatement]
+data WhileStmt = WhileStmt Expr [Stmt]
 
 --
 -- | Concrete syntax:
 --
--- @try { \<JSStatement\>* } catch ( \<JSName\> ) { \<JSStatement\>* }@
+-- @try { \<Stmt\>* } catch ( \<Name\> ) { \<Stmt\>* }@
 --
-data JSTryStatement = JSTryStatement [JSStatement] JSName [JSStatement]
+data TryStmt = TryStmt [Stmt] Name [Stmt]
 
 --
 -- | Concrete syntax:
 --
--- @throw \<JSExpression\>;@
+-- @throw \<Expr\>;@
 --
-data JSThrowStatement = JSThrowStatement JSExpression
+data ThrowStmt = ThrowStmt Expr
 
 --
 -- | Concrete syntax:
 --
--- @return \<JSExpression\>?;@
+-- @return \<Expr\>?;@
 --
 --   e.g.
 --
@@ -397,12 +397,12 @@ data JSThrowStatement = JSThrowStatement JSExpression
 --
 --   2. @return 2 + x;@
 --
-data JSReturnStatement = JSReturnStatement (Maybe JSExpression)
+data ReturnStmt = ReturnStmt (Maybe Expr)
 
 --
 -- | Concrete syntax:
 --
--- @break \<JSName\>?;@
+-- @break \<Name\>?;@
 --
 -- e.g.
 --
@@ -410,25 +410,25 @@ data JSReturnStatement = JSReturnStatement (Maybe JSExpression)
 --
 -- 2. @break some_label;@
 --
-data JSBreakStatement = JSBreakStatement (Maybe JSName)
+data BreakStmt = BreakStmt (Maybe Name)
 
 --
 -- | Concrete syntax:
 --
--- @\<JSValue\>+ \<JSRValue\>@
+-- @\<Value\>+ \<RValue\>@
 --
 -- or
 --
--- @delete \<JSExpression\> \<JSRefinement\>@
+-- @delete \<Expr\> \<Refinement\>@
 --
-data JSExpressionStatement
-  = JSESApply (NonEmptyList JSLValue) JSRValue
-  | JSESDelete JSExpression JSRefinement
+data ExprStmt
+  = ESApply (NonEmptyList LValue) RValue
+  | ESDelete Expr Refinement
 
 --
 -- | Concrete syntax:
 --
--- @\<JSName\> \(\<JSInvocation\>* \<JSRefinement\>\)*@
+-- @\<Name\> \(\<Invocation\>* \<Refinement\>\)*@
 --
 --   e.g.
 --
@@ -444,24 +444,24 @@ data JSExpressionStatement
 --
 --   6. @x.fun_field_1(x+2).fun_field_2(y+3).field_3@
 --
-data JSLValue = JSLValue JSName [([JSInvocation], JSRefinement)]
+data LValue = LValue Name [([Invocation], Refinement)]
 
 --
 -- | Concrete syntax:
 --
--- @=  \<JSExpression\>@
+-- @=  \<Expr\>@
 --
 -- or
 --
--- @+= \<JSExpression\>@
+-- @+= \<Expr\>@
 --
 -- or
 --
--- @-= \<JSExpression\>@
+-- @-= \<Expr\>@
 --
 -- or
 --
--- @\<JSInvocation\>+@
+-- @\<Invocation\>+@
 --
 -- e.g.
 --
@@ -477,61 +477,61 @@ data JSLValue = JSLValue JSName [([JSInvocation], JSRefinement)]
 --
 -- 6. @(x,y,z)@
 --
-data JSRValue
-  = JSRVAssign    JSExpression
-  | JSRVAddAssign JSExpression
-  | JSRVSubAssign JSExpression
-  | JSRVInvoke    (NonEmptyList JSInvocation)
+data RValue
+  = RVAssign    Expr
+  | RVAddAssign Expr
+  | RVSubAssign Expr
+  | RVInvoke    (NonEmptyList Invocation)
 
-data JSExpression = JSExpressionLiteral    JSLiteral -- ^ @\<JSLiteral\>@
-                  | JSExpressionName       JSName    -- ^ @\<JSName\>@
+data Expr = ExprLit    Lit -- ^ @\<Lit\>@
+                  | ExprName       Name    -- ^ @\<Name\>@
 
-                  -- | @\<JSPrefixOperator> \<JSExpression\>@
-                  | JSExpressionPrefix     JSPrefixOperator JSExpression
+                  -- | @\<PrefixOperator> \<Expr\>@
+                  | ExprPrefix     PrefixOperator Expr
 
-                  -- | @\<JSExpression\> \<JSInfixOperator\> \<JSExpression\>@
-                  | JSExpressionInfix      JSInfixOperator  JSExpression JSExpression
+                  -- | @\<Expr\> \<InfixOperator\> \<Expr\>@
+                  | ExprInfix      InfixOperator  Expr Expr
 
-                  -- | @\<JSExpression\> ? \<JSExpression\> : \<JSExpression\>@
-                  | JSExpressionTernary    JSExpression     JSExpression JSExpression
+                  -- | @\<Expr\> ? \<Expr\> : \<Expr\>@
+                  | ExprTernary    Expr     Expr Expr
 
-                  -- | @\<JSExpression\>\<JSInvocation\>@
-                  | JSExpressionInvocation JSExpression     JSInvocation
+                  -- | @\<Expr\>\<Invocation\>@
+                  | ExprInvocation Expr     Invocation
 
-                  -- | @\<JSExpression\>\<JSRefinement\>@
-                  | JSExpressionRefinement JSExpression     JSRefinement
+                  -- | @\<Expr\>\<Refinement\>@
+                  | ExprRefinement Expr     Refinement
 
-                  -- | new @\<JSExpression\>\<JSInvocation\>@
-                  | JSExpressionNew        JSExpression     JSInvocation
+                  -- | new @\<Expr\>\<Invocation\>@
+                  | ExprNew        Expr     Invocation
 
-                  -- | delete @\<JSExpression\>\<JSRefinement\>@
-                  | JSExpressionDelete     JSExpression     JSRefinement
+                  -- | delete @\<Expr\>\<Refinement\>@
+                  | ExprDelete     Expr     Refinement
 
-data JSPrefixOperator
-  = JSTypeOf   -- ^ @typeof@
-  | JSToNumber -- ^ @+@
-  | JSNegate   -- ^ @-@
-  | JSNot      -- ^ @!@
+data PrefixOperator
+  = TypeOf   -- ^ @typeof@
+  | ToNumber -- ^ @+@
+  | Negate   -- ^ @-@
+  | Not      -- ^ @!@
 
-data JSInfixOperator
-  = JSMul  -- ^ @*@
-  | JSDiv  -- ^ @/@
-  | JSMod  -- ^ @%@
-  | JSAdd  -- ^ @+@
-  | JSSub  -- ^ @-@
-  | JSGTE  -- ^ @>=@
-  | JSLTE  -- ^ @<=@
-  | JSGT   -- ^ @>@
-  | JSLT   -- ^ @<@
-  | JSEq   -- ^ @===@
-  | JSNotEq-- ^ @!==@
-  | JSOr   -- ^ @||@
-  | JSAnd  -- ^ @&&@
+data InfixOperator
+  = Mul  -- ^ @*@
+  | Div  -- ^ @/@
+  | Mod  -- ^ @%@
+  | Add  -- ^ @+@
+  | Sub  -- ^ @-@
+  | GTE  -- ^ @>=@
+  | LTE  -- ^ @<=@
+  | GT   -- ^ @>@
+  | LT   -- ^ @<@
+  | Eq   -- ^ @===@
+  | NotEq-- ^ @!==@
+  | Or   -- ^ @||@
+  | And  -- ^ @&&@
 
 --
 -- | Concrete syntax:
 --
--- @\<JSExpression\>*@
+-- @\<Expr\>*@
 --
 --   e.g.
 --
@@ -541,15 +541,15 @@ data JSInfixOperator
 --
 -- 3. @(x,z,y)@
 --
-data JSInvocation = JSInvocation [JSExpression]
+data Invocation = Invocation [Expr]
 
 -- | Concrete syntax:
 --
--- @.\<JSName\>@
+-- @.\<Name\>@
 --
 -- or
 --
--- @[\<JSExpression\>]@
+-- @[\<Expr\>]@
 --
 -- e.g.
 --
@@ -557,9 +557,9 @@ data JSInvocation = JSInvocation [JSExpression]
 --
 -- 2. @[i+1]@
 --
-data JSRefinement
-  = JSProperty  JSName
-  | JSSubscript JSExpression
+data Refinement
+  = Property  Name
+  | Subscript Expr
 
 --
 -- | Interestingly, the syntax diagrams presented in the book don't include
@@ -568,14 +568,14 @@ data JSRefinement
 --
 
 
-data JSLiteral
-  = JSLiteralNumber   JSNumber          -- ^ @\<JSNumber\>@
-  | JSLiteralBool     Bool              -- ^ @\<true | false\>@
-  | JSLiteralString   JSString          -- ^ @\<JSString\>@
-  | JSLiteralObject   JSObjectLiteral   -- ^ @\<JSObjectLiteral\>@
-  | JSLiteralArray    JSArrayLiteral    -- ^ @\<JSArrayLiteral\>@
-  | JSLiteralFunction JSFunctionLiteral -- ^ @\<JSFunctionLiteral\>@
---  | JSLiteralRegexp   JSRegexpLiteral -- TODO: Add regexps
+data Lit
+  = LitNumber   Number      -- ^ @\<Number\>@
+  | LitBool     Bool        -- ^ @\<true | false\>@
+  | LitString   JSString    -- ^ @\<String\>@
+  | LitObject   ObjectLit   -- ^ @\<ObjectLit\>@
+  | LitArray    ArrayLit    -- ^ @\<ArrayLit\>@
+  | LitFn FnLit -- ^ @\<FnLit\>@
+--  | LitRegexp   RegexpLit -- TODO: Add regexps
 
 --
 -- | Concrete syntax:
@@ -584,18 +584,18 @@ data JSLiteral
 --
 -- or
 --
--- @\{\<JSObjectField\> \(, \<JSObjectField\> \)*\}@    -- one or more fields
+-- @\{\<ObjectField\> \(, \<ObjectField\> \)*\}@    -- one or more fields
 --
-data JSObjectLiteral = JSObjectLiteral [JSObjectField]
+data ObjectLit = ObjectLit [ObjectField]
 
 --
 -- | Concrete syntax:
 --
--- @\<JSName\>: \<JSExpression\>        @ -- for Left
+-- @\<Name\>: \<Expr\>        @ -- for Left
 --
 -- or
 --
--- @\<JSString\>: \<JSExpression\>      @ -- for Right
+-- @\<String\>: \<Expr\>      @ -- for Right
 --
 --   e.g.
 --
@@ -603,7 +603,7 @@ data JSObjectLiteral = JSObjectLiteral [JSObjectField]
 --
 --   2. @\"value\": 3 - z@
 --
-data JSObjectField  = JSObjectField (Either JSName JSString) JSExpression
+data ObjectField  = ObjectField (Either Name String) Expr
 
 --
 -- | Concrete syntax:
@@ -612,23 +612,23 @@ data JSObjectField  = JSObjectField (Either JSName JSString) JSExpression
 --
 -- or
 --
--- @[\<JSExpression\> \(, \<JSExpression\>*\) ]@ -- non empty array
+-- @[\<Expr\> \(, \<Expr\>*\) ]@ -- non empty array
 --
-data JSArrayLiteral = JSArrayLiteral [JSExpression]
+data ArrayLit = ArrayLit [Expr]
 
 --
 -- | Concrete syntax:
 --
--- @function \<JSName\>? \<JSFunctionBody\>@
+-- @function \<Name\>? \<FnBody\>@
 --
-data JSFunctionLiteral = JSFunctionLiteral (Maybe JSName) [JSName] JSFunctionBody
+data FnLit = FnLit (Maybe Name) [Name] FnBody
 
 --
 -- | Concrete syntax:
 --
--- @{ \<JSVarStatement\>+ \<JSStatement\>+ }@
+-- @{ \<VarStmt\>+ \<Stmt\>+ }@
 --
-data JSFunctionBody = JSFunctionBody [JSVarStatement] [JSStatement]
+data FnBody = FnBody [VarStmt] [Stmt]
 
 -- | Programs. All variable statements come first.
-data JSProgram = JSProgram [JSVarStatement] [JSStatement]
+data Program = Program [VarStmt] [Stmt]

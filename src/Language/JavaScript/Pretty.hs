@@ -7,6 +7,7 @@ module Language.JavaScript.Pretty (
 -- System libraries
 import Text.PrettyPrint.Leijen
 import Text.PrettyPrint.Leijen.PrettyPrec
+import Prelude hiding (GT, LT)
 
 -- friends
 import Language.JavaScript.AST
@@ -14,10 +15,10 @@ import Language.JavaScript.NonEmptyList
 
 -- FIXME: This will be a little tricky to get right.
 instance Pretty JSString where
-  pretty s = char '"' <> text (unJSString s) <> char '"' -- enclosed in double quotes
+  pretty s = char '"' <> text (unString s) <> char '"' -- enclosed in double quotes
 
-instance Pretty JSName where
-  pretty = text . unJSName
+instance Pretty Name where
+  pretty = text . unName
 
 sepWith :: Pretty a => Doc -> [a] -> Doc
 sepWith s = encloseSep empty empty s . map pretty
@@ -40,8 +41,8 @@ data Associativity = LeftToRight | RightToLeft deriving Eq
 
 
 prettyInfixOpApp :: (PrettyPrec a, PrettyPrec b) => Int ->  OpInfo -> a -> b -> Doc
-prettyInfixOpApp prec (OpInfo opPrec assoc name) a b =
-  docParen (prec > opPrec) $ bump LeftToRight a <+> text name <+> bump RightToLeft b
+prettyInfixOpApp prec (OpInfo opPrec assoc nm) a b =
+  docParen (prec > opPrec) $ bump LeftToRight a <+> text nm <+> bump RightToLeft b
   where
     bump assoc' d = prettyPrec opPrec' d
       where opPrec' = if assoc == assoc' then opPrec else opPrec + 1
@@ -62,68 +63,68 @@ data OpInfo = OpInfo Int           -- recedence
 --
 -- Lower precedence means the operatorbinds more tightly
 --
-infixOpInfo :: JSInfixOperator -> OpInfo
+infixOpInfo :: InfixOperator -> OpInfo
 infixOpInfo op = case op of
-  JSMul   -> go 6 "*"
-  JSDiv   -> go 6 "/"
-  JSMod   -> go 6 "%"
-  JSAdd   -> go 5 "+"
-  JSSub   -> go 5 "-"
-  JSGTE   -> go 4 ">="
-  JSLTE   -> go 4 "<="
-  JSGT    -> go 4 ">"
-  JSLT    -> go 4 "<"
-  JSEq    -> go 3 "==="
-  JSNotEq -> go 3 "!=="
-  JSOr    -> go 1 "||"
-  JSAnd   -> go 2 "&&"
+  Mul   -> go 6 "*"
+  Div   -> go 6 "/"
+  Mod   -> go 6 "%"
+  Add   -> go 5 "+"
+  Sub   -> go 5 "-"
+  GTE   -> go 4 ">="
+  LTE   -> go 4 "<="
+  GT    -> go 4 ">"
+  LT    -> go 4 "<"
+  Eq    -> go 3 "==="
+  NotEq -> go 3 "!=="
+  Or    -> go 1 "||"
+  And   -> go 2 "&&"
  where go i s = OpInfo i LeftToRight s
 
 -----------------------------------------------------------------------
 
-instance Pretty JSNumber where
-  pretty (JSNumber n) = pretty n -- FIXME: Make sure this always produce valid Javascript numbers.
+instance Pretty Number where
+  pretty (Number n) = pretty n -- FIXME: Make sure this always produce valid Javascript numbers.
 
-instance PrettyPrec JSNumber -- default
+instance PrettyPrec Number -- default
 
-instance Pretty JSVarStatement where
-  pretty (JSVarStatement varDecls) = sepWith' (comma <+> empty) varDecls
+instance Pretty VarStmt where
+  pretty (VarStmt varDecls) = sepWith' (comma <+> empty) varDecls
 
-instance PrettyPrec JSVarStatement -- default
+instance PrettyPrec VarStmt -- default
 
-instance Pretty JSVarDecl where
-  pretty (JSVarDecl nm Nothing)    = pretty nm
-  pretty (JSVarDecl nm (Just exp')) = pretty nm <+> text "=" <+> pretty exp'
+instance Pretty VarDecl where
+  pretty (VarDecl nm Nothing)    = pretty nm
+  pretty (VarDecl nm (Just exp')) = pretty nm <+> text "=" <+> pretty exp'
 
-instance PrettyPrec JSVarDecl -- default
+instance PrettyPrec VarDecl -- default
 
-instance Pretty JSStatement where
+instance Pretty Stmt where
   pretty stmt = case stmt of
-    (JSStatementExpression  es)  -> pretty es <> semi
-    (JSStatementDisruptive  ds)  -> pretty ds
-    (JSStatementTry         ts)  -> pretty ts
-    (JSStatementIf          is)  -> pretty is
-    (JSStatementSwitch mbLbl ss) -> pp mbLbl ss
-    (JSStatementWhile  mbLbl ws) -> pp mbLbl ws
-    (JSStatementFor    mbLbl fs) -> pp mbLbl fs
-    (JSStatementDo     mbLbl ds) -> pp mbLbl ds
+    (StmtExpr  es)  -> pretty es <> semi
+    (StmtDisruptive  ds)  -> pretty ds
+    (StmtTry         ts)  -> pretty ts
+    (StmtIf          is)  -> pretty is
+    (StmtSwitch mbLbl ss) -> pp mbLbl ss
+    (StmtWhile  mbLbl ws) -> pp mbLbl ws
+    (StmtFor    mbLbl fs) -> pp mbLbl fs
+    (StmtDo     mbLbl ds) -> pp mbLbl ds
     where
-      pp :: Pretty a => Maybe JSName -> a -> Doc
+      pp :: Pretty a => Maybe Name -> a -> Doc
       pp (Just label) doc = pretty label <> colon <+> pretty doc
       pp Nothing      doc = pretty doc
 
-instance PrettyPrec JSStatement-- default
+instance PrettyPrec Stmt-- default
 
-instance Pretty JSDisruptiveStatement where
+instance Pretty DisruptiveStmt where
   pretty stmt = case stmt of
-    JSDSBreak  bs -> pretty bs
-    JSDSReturn rs -> pretty rs
-    JSDSThrow  ts -> pretty ts
+    DSBreak  bs -> pretty bs
+    DSReturn rs -> pretty rs
+    DSThrow  ts -> pretty ts
 
-instance PrettyPrec JSDisruptiveStatement -- default
+instance PrettyPrec DisruptiveStmt -- default
 
-instance Pretty JSIfStatement where
-  pretty (JSIfStatement cond thenStmts blockOrIf) =
+instance Pretty IfStmt where
+  pretty (IfStmt cond thenStmts blockOrIf) =
     text "if" <+> parens (pretty cond) <+> prettyBlock thenStmts <+> ppRest
     where
       ppRest = case blockOrIf of
@@ -131,194 +132,194 @@ instance Pretty JSIfStatement where
         Just (Left elseStmts) -> text "else" <+> prettyBlock elseStmts
         Just (Right ifStmt)   -> pretty ifStmt
 
-instance PrettyPrec JSIfStatement -- default
+instance PrettyPrec IfStmt -- default
 
-instance Pretty JSSwitchStatement where
-  pretty (JSSwitchStatementSingleCase cond caseClause) =
+instance Pretty SwitchStmt where
+  pretty (SwitchStmtSingleCase cond caseClause) =
     text "switch" <+> parens (pretty cond) <+> lbrace <$> pretty caseClause <$> rbrace
-  pretty (JSSwitchStatement cond cds stmts) =
+  pretty (SwitchStmt cond cds stmts) =
     text "switch" <+> parens (pretty cond) <+> lbrace <$>
       indent 2 (vcat (toList . fmap pretty $ cds) <$>
                (text "default:" <$>
                   indent 2 (endWith semi stmts))) <$>
     rbrace
 
-instance PrettyPrec JSSwitchStatement -- default
+instance PrettyPrec SwitchStmt -- default
 
-instance Pretty JSCaseAndDisruptive where
-  pretty (JSCaseAndDisruptive caseClause disruptive) =
+instance Pretty CaseAndDisruptive where
+  pretty (CaseAndDisruptive caseClause disruptive) =
     pretty caseClause <$> pretty disruptive
 
-instance PrettyPrec JSCaseAndDisruptive -- default
+instance PrettyPrec CaseAndDisruptive -- default
 
-instance Pretty JSCaseClause where
-  pretty (JSCaseClause exp' stmts) =
+instance Pretty CaseClause where
+  pretty (CaseClause exp' stmts) =
     text "case" <+> pretty exp' <> colon <+> endWith semi stmts
 
-instance PrettyPrec JSCaseClause -- default
+instance PrettyPrec CaseClause -- default
 
-instance Pretty JSForStatement where
-  pretty (JSForStatementCStyle init_ cond incr stmts) =
+instance Pretty ForStmt where
+  pretty (ForStmtCStyle init_ cond incr stmts) =
     text "for" <+> parens (pretty init_ <> semi <+> pretty cond <> semi <+>
                            pretty incr) <+> prettyBlock stmts
-  pretty (JSForStatementInStyle name exp' stmts) =
-    text "for" <+> parens (pretty name <+> text "in" <+> pretty exp') <+> prettyBlock stmts
+  pretty (ForStmtInStyle nm exp' stmts) =
+    text "for" <+> parens (pretty nm <+> text "in" <+> pretty exp') <+> prettyBlock stmts
 
-instance PrettyPrec JSForStatement -- default
+instance PrettyPrec ForStmt -- default
 
-instance Pretty JSDoStatement where
-  pretty (JSDoStatement stmts cond) =
+instance Pretty DoStmt where
+  pretty (DoStmt stmts cond) =
     text "do" <+> prettyBlock stmts <+> text "while" <+>
       parens (pretty cond) <> semi
 
-instance PrettyPrec JSDoStatement -- default
+instance PrettyPrec DoStmt -- default
 
-instance Pretty JSWhileStatement where
-  pretty (JSWhileStatement cond stmts) =
+instance Pretty WhileStmt where
+  pretty (WhileStmt cond stmts) =
     text "while" <+> parens (pretty cond) <+> prettyBlock stmts
 
-instance PrettyPrec JSWhileStatement -- default
+instance PrettyPrec WhileStmt -- default
 
-instance Pretty JSTryStatement where
-  pretty (JSTryStatement tryStmts varName catchStmts) =
+instance Pretty TryStmt where
+  pretty (TryStmt tryStmts varName catchStmts) =
     text "try" <+> prettyBlock tryStmts <+> parens (pretty varName) <+> prettyBlock catchStmts
 
-instance PrettyPrec JSTryStatement -- default
+instance PrettyPrec TryStmt -- default
 
-instance Pretty JSThrowStatement where
-  pretty (JSThrowStatement exp_) =
+instance Pretty ThrowStmt where
+  pretty (ThrowStmt exp_) =
     text "throw" <+> pretty exp_ <> semi
 
-instance PrettyPrec JSThrowStatement -- default
+instance PrettyPrec ThrowStmt -- default
 
-instance Pretty JSReturnStatement where
-  pretty (JSReturnStatement mbExp) = case mbExp of
+instance Pretty ReturnStmt where
+  pretty (ReturnStmt mbExp) = case mbExp of
     Nothing  -> text "return;"
     Just exp_ -> text "return" <+> pretty exp_ <> semi
 
-instance PrettyPrec JSReturnStatement -- default
+instance PrettyPrec ReturnStmt -- default
 
-instance Pretty JSBreakStatement      where
-  pretty (JSBreakStatement mbExp) = case mbExp of
+instance Pretty BreakStmt      where
+  pretty (BreakStmt mbExp) = case mbExp of
     Nothing  -> text "break;"
     Just exp_ -> text "break" <+> pretty exp_ <> semi
 
-instance PrettyPrec JSBreakStatement -- default
+instance PrettyPrec BreakStmt -- default
 
-instance Pretty JSExpressionStatement where
-  pretty (JSESApply lvalues rvalue) =
+instance Pretty ExprStmt where
+  pretty (ESApply lvalues rvalue) =
     sepWith' (space <> text "=" <> space) lvalues <+> pretty rvalue
-  pretty (JSESDelete exp_ refine) =
+  pretty (ESDelete exp_ refine) =
     text "delete" <+> pretty exp_ <> pretty refine
 
-instance PrettyPrec JSExpressionStatement -- default
+instance PrettyPrec ExprStmt -- default
 
-instance Pretty JSLValue              where
-  pretty (JSLValue name invsAndRefines) = pretty name <> (hcat . map ppIR $ invsAndRefines)
+instance Pretty LValue              where
+  pretty (LValue nm invsAndRefines) = pretty nm <> (hcat . map ppIR $ invsAndRefines)
     where
       ppIR (invs, refine) = (hcat . map pretty $ invs) <> pretty refine
 
-instance PrettyPrec JSLValue -- default
+instance PrettyPrec LValue -- default
 
-instance Pretty JSRValue              where
+instance Pretty RValue              where
   pretty rvalue = case rvalue of
-    JSRVAssign e    -> text "="  <+> pretty e
-    JSRVAddAssign e -> text "+=" <+> pretty e
-    JSRVSubAssign e -> text "-=" <+> pretty e
-    JSRVInvoke invs -> hcat . toList . fmap pretty $ invs
+    RVAssign e    -> text "="  <+> pretty e
+    RVAddAssign e -> text "+=" <+> pretty e
+    RVSubAssign e -> text "-=" <+> pretty e
+    RVInvoke invs -> hcat . toList . fmap pretty $ invs
 
-instance PrettyPrec JSRValue -- default
+instance PrettyPrec RValue -- default
 
-instance Pretty JSExpression          where
+instance Pretty Expr          where
   pretty = prettyPrec 0
 
-instance PrettyPrec JSExpression where
+instance PrettyPrec Expr where
   prettyPrec i exp_ = case exp_ of
-    JSExpressionLiteral literal      -> pretty literal
-    JSExpressionName name            -> pretty name
-    JSExpressionPrefix prefixOp e    -> pretty prefixOp <> pretty e
-    JSExpressionInfix infixOp e e'   -> prettyInfixOpApp i (infixOpInfo infixOp) e e'
-    JSExpressionTernary cond thn els ->
+    ExprLit literal      -> pretty literal
+    ExprName nm            -> pretty nm
+    ExprPrefix prefixOp e    -> pretty prefixOp <> pretty e
+    ExprInfix infixOp e e'   -> prettyInfixOpApp i (infixOpInfo infixOp) e e'
+    ExprTernary cond thn els ->
       pretty cond <+> char '?' <+> pretty thn <+> colon <+> pretty els
-    JSExpressionInvocation e i'       -> pretty e <> pretty i'
-    JSExpressionRefinement e r       -> pretty e <> pretty r
-    JSExpressionNew e i'              -> text "new" <+> pretty e <> pretty i'
-    JSExpressionDelete e r           -> text "new" <+> pretty e <> pretty r
+    ExprInvocation e i'       -> pretty e <> pretty i'
+    ExprRefinement e r       -> pretty e <> pretty r
+    ExprNew e i'              -> text "new" <+> pretty e <> pretty i'
+    ExprDelete e r           -> text "new" <+> pretty e <> pretty r
 
-instance Pretty JSPrefixOperator      where
+instance Pretty PrefixOperator      where
   pretty op = case op of
-    JSTypeOf   -> text "typeof" <+> empty
-    JSToNumber -> char '+'
-    JSNegate   -> char '-'
-    JSNot      -> char '!'
+    TypeOf   -> text "typeof" <+> empty
+    ToNumber -> char '+'
+    Negate   -> char '-'
+    Not      -> char '!'
 
-instance PrettyPrec JSPrefixOperator --default
+instance PrettyPrec PrefixOperator --default
 
-instance Pretty JSInfixOperator where
+instance Pretty InfixOperator where
   pretty = prettyPrec 0
 
-instance PrettyPrec JSInfixOperator where
+instance PrettyPrec InfixOperator where
   prettyPrec = error "we never print an operator by itself"
 
-instance Pretty JSInvocation          where
-  pretty (JSInvocation es) = lparen <> sepWith (comma <+> empty) es <> rparen
+instance Pretty Invocation          where
+  pretty (Invocation es) = lparen <> sepWith (comma <+> empty) es <> rparen
 
-instance PrettyPrec JSInvocation -- default
+instance PrettyPrec Invocation -- default
 
-instance Pretty JSRefinement          where
-  pretty (JSProperty name) = char '.' <> pretty name
-  pretty (JSSubscript e)   = char '[' <> pretty e <> char ']'
+instance Pretty Refinement          where
+  pretty (Property nm) = char '.' <> pretty nm
+  pretty (Subscript e)   = char '[' <> pretty e <> char ']'
 
-instance PrettyPrec JSRefinement -- default
+instance PrettyPrec Refinement -- default
 
-instance Pretty JSLiteral             where
+instance Pretty Lit             where
   pretty lit = case lit of
-    JSLiteralNumber n   -> pretty n
-    JSLiteralBool   b   -> pretty b
-    JSLiteralString s   -> pretty s
-    JSLiteralObject o   -> pretty o
-    JSLiteralArray  a   -> pretty a
-    JSLiteralFunction f -> pretty f
+    LitNumber n   -> pretty n
+    LitBool   b   -> pretty b
+    LitString s   -> pretty s
+    LitObject o   -> pretty o
+    LitArray  a   -> pretty a
+    LitFn f -> pretty f
 
-instance PrettyPrec JSLiteral -- default
+instance PrettyPrec Lit -- default
 
-instance Pretty JSObjectLiteral       where
-  pretty (JSObjectLiteral fields) = lbrace <> sepWith (comma <$> empty) fields <> rbrace
+instance Pretty ObjectLit       where
+  pretty (ObjectLit fields) = lbrace <> sepWith (comma <$> empty) fields <> rbrace
 
-instance PrettyPrec JSObjectLiteral -- default
+instance PrettyPrec ObjectLit -- default
 
-instance Pretty JSObjectField         where
-  pretty (JSObjectField eitherNameString e) = ppEitherNameString <> colon <+> pretty e
+instance Pretty ObjectField         where
+  pretty (ObjectField eitherNameString e) = ppEitherNameString <> colon <+> pretty e
     where ppEitherNameString = case eitherNameString of
-                 Left name -> pretty name
+                 Left nm -> pretty nm
                  Right s   -> pretty s
 
-instance PrettyPrec JSObjectField -- default
+instance PrettyPrec ObjectField -- default
 
-instance Pretty JSArrayLiteral        where
-  pretty (JSArrayLiteral es) = lbracket <> sepWith (comma <+> empty) es <> rbracket
+instance Pretty ArrayLit        where
+  pretty (ArrayLit es) = lbracket <> sepWith (comma <+> empty) es <> rbracket
 
-instance PrettyPrec JSArrayLiteral -- default
+instance PrettyPrec ArrayLit -- default
 
-instance Pretty JSFunctionLiteral     where
-  pretty (JSFunctionLiteral mbName params body) =
+instance Pretty FnLit     where
+  pretty (FnLit mbName params body) =
     text "function" `join` (parens . hcat . map pretty $ params) <+> pretty body
       where join = case mbName of
-                     Just name -> (\a b -> a <+> pretty name <> b)
+                     Just nm -> (\a b -> a <+> pretty nm <> b)
                      Nothing   -> (<>)
 
-instance PrettyPrec JSFunctionLiteral -- default
+instance PrettyPrec FnLit -- default
 
-instance Pretty JSFunctionBody        where
-  pretty (JSFunctionBody varStmts stmts) =
+instance Pretty FnBody        where
+  pretty (FnBody varStmts stmts) =
     lbrace <$>
     indent 2 (sepWith (semi <$> empty) (map pretty varStmts ++ map pretty stmts)) <$>
     rbrace
 
-instance PrettyPrec JSFunctionBody -- default
+instance PrettyPrec FnBody -- default
 
-instance Pretty JSProgram where
-  pretty (JSProgram varStmts stmts) = vcat (map pretty varStmts ++ map pretty stmts)
+instance Pretty Program where
+  pretty (Program varStmts stmts) = vcat (map pretty varStmts ++ map pretty stmts)
 
 ------------------------
 
@@ -328,26 +329,26 @@ test1 = add (n 1) (add (n 2) (add (add (n 3) (n 4)) (n 5)))
 test2  = add (n 1) (mul (n 2) (n 3))
 test2' = ((n 1) `add` (n 2)) `mul` (n 3)
 
-test3 :: JSExpressionStatement
+test3 :: ExprStmt
 test3 = case jsName "x" of
   Right nm ->
     case jsName "y" of
-      Right nm' -> JSESApply ((JSLValue nm' []) <:> singleton (JSLValue nm []))
-                     (JSRVAssign test2')
+      Right nm' -> ESApply ((LValue nm' []) <:> singleton (LValue nm []))
+                     (RVAssign test2')
 
 
-test4 :: JSStatement
-test4 = JSStatementExpression test3
+test4 :: Stmt
+test4 = StmtExpr test3
 
--- test4a = JSStatement
+-- test4a = Stmt
 
-test5 :: JSProgram
-test5 = JSProgram [] [test4, test4]
+test5 :: Program
+test5 = Program [] [test4, test4]
 
-test6 :: JSFunctionLiteral
-test6 = JSFunctionLiteral Nothing [] (JSFunctionBody [] [test4])
+test6 :: FnLit
+test6 = FnLit Nothing [] (FnBody [] [test4])
 
-add e e' = JSExpressionInfix JSAdd e e'
-mul e e' = JSExpressionInfix JSMul e e'
-n x = JSExpressionLiteral (JSLiteralNumber (JSNumber x))
+add e e' = ExprInfix Add e e'
+mul e e' = ExprInfix Mul e e'
+n x = ExprLit (LitNumber (Number x))
 -}
