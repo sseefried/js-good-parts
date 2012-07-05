@@ -109,7 +109,7 @@
 -- @f@ is local. It will not be in scope outside of the function body.
 --
 module Language.JavaScript.AST (
-  -- String, Name can't be create except with constructors
+  -- JSString, Name can't be create except with constructors
   JSString, Name, 
   unString, unName,
   jsString, name,
@@ -126,6 +126,12 @@ module Language.JavaScript.AST (
   Lit(..), ObjectLit(..), ObjectField(..), ArrayLit(..),
   FnLit(..), FnBody(..), Program(..)
 ) where
+
+--
+-- | Abbreviations
+--
+--   Stmt = Statement, Expr = Expression, Fn = Function, Decl = Declaration
+--
 
 import Language.JavaScript.NonEmptyList
 
@@ -348,15 +354,16 @@ data CaseClause = CaseClause Expr [Stmt]
 --
 -- 4. @for ( i in indices ) { a[i] = 66; }@
 --
-data ForStmt = ForStmtCStyle
-                        (Maybe ExprStmt)
-                        (Maybe Expr)
-                        (Maybe ExprStmt)
-                        [Stmt]
-                    | ForStmtInStyle
-                        Name
-                        Expr
-                        [Stmt]
+data ForStmt
+  = ForStmtCStyle
+       (Maybe ExprStmt)
+       (Maybe Expr)
+       (Maybe ExprStmt)
+       [Stmt]
+    | ForStmtInStyle
+       Name
+       Expr
+       [Stmt]
 
 --
 -- | Concrete syntax:
@@ -483,29 +490,30 @@ data RValue
   | RVSubAssign Expr
   | RVInvoke    (NonEmptyList Invocation)
 
-data Expr = ExprLit    Lit -- ^ @\<Lit\>@
-                  | ExprName       Name    -- ^ @\<Name\>@
+data Expr 
+  = ExprLit    Lit -- ^ @\<Lit\>@
+  | ExprName       Name    -- ^ @\<Name\>@
 
-                  -- | @\<PrefixOperator> \<Expr\>@
-                  | ExprPrefix     PrefixOperator Expr
+  -- | @\<PrefixOperator> \<Expr\>@
+  | ExprPrefix     PrefixOperator Expr
 
-                  -- | @\<Expr\> \<InfixOperator\> \<Expr\>@
-                  | ExprInfix      InfixOperator  Expr Expr
+  -- | @\<Expr\> \<InfixOperator\> \<Expr\>@
+  | ExprInfix      InfixOperator  Expr Expr
 
-                  -- | @\<Expr\> ? \<Expr\> : \<Expr\>@
-                  | ExprTernary    Expr     Expr Expr
+  -- | @\<Expr\> ? \<Expr\> : \<Expr\>@
+  | ExprTernary    Expr     Expr Expr
 
-                  -- | @\<Expr\>\<Invocation\>@
-                  | ExprInvocation Expr     Invocation
+  -- | @\<Expr\>\<Invocation\>@
+  | ExprInvocation Expr     Invocation
 
-                  -- | @\<Expr\>\<Refinement\>@
-                  | ExprRefinement Expr     Refinement
+  -- | @\<Expr\>\<Refinement\>@
+  | ExprRefinement Expr     Refinement
 
-                  -- | new @\<Expr\>\<Invocation\>@
-                  | ExprNew        Expr     Invocation
+  -- | new @\<Expr\>\<Invocation\>@
+  | ExprNew        Expr     Invocation
 
-                  -- | delete @\<Expr\>\<Refinement\>@
-                  | ExprDelete     Expr     Refinement
+  -- | delete @\<Expr\>\<Refinement\>@
+  | ExprDelete     Expr     Refinement
 
 data PrefixOperator
   = TypeOf   -- ^ @typeof@

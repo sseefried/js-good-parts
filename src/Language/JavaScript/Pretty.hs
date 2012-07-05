@@ -14,6 +14,8 @@ import Language.JavaScript.AST
 import Language.JavaScript.NonEmptyList
 
 -- FIXME: This will be a little tricky to get right.
+-- If the string contains double quotes you need to escape.
+-- If the string contains single quotes you need to escape.
 instance Pretty JSString where
   pretty s = char '"' <> text (unString s) <> char '"' -- enclosed in double quotes
 
@@ -51,17 +53,12 @@ docParen :: Bool -> Doc -> Doc
 docParen True  = parens
 docParen False = id
 
-data OpInfo = OpInfo Int           -- recedence
+data OpInfo = OpInfo Int           -- precedence
                      Associativity -- associativity
                      String        -- name
---
--- FIXME: What about the associativity of +=, -=, etc. It's not defined in your
--- grammar. How will you handle it? Is it even defined in JS:TGP? Answer this question
--- and then write a note about it.
---
 
 --
--- Lower precedence means the operatorbinds more tightly
+-- Lower precedence means the operator binds more tightly
 --
 infixOpInfo :: InfixOperator -> OpInfo
 infixOpInfo op = case op of
