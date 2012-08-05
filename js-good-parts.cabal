@@ -27,5 +27,5 @@ Library
 
   Exposed-Modules:    Language.JavaScript.AST
                       Language.JavaScript.Pretty
-  Other-Modules:      Language.JavaScript.NonEmptyList
-                      Text.PrettyPrint.Leijen.PrettyPrec
+                      Language.JavaScript.NonEmptyList
+  Other-Modules:      Text.PrettyPrint.Leijen.PrettyPrec
