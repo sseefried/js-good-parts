@@ -108,6 +108,10 @@
 --
 -- @f@ is local. It will not be in scope outside of the function body.
 --
+-- Abbreviations:
+--
+-- > Stmt = Statement, Expr = Expression, Fn = Function, Decl = Declaration
+--
 module Language.JavaScript.AST (
   -- JSString, Name can't be create except with constructors
   JSString, Name, 
@@ -126,12 +130,6 @@ module Language.JavaScript.AST (
   Lit(..), ObjectLit(..), ObjectField(..), ArrayLit(..),
   FnLit(..), FnBody(..), Program(..)
 ) where
-
---
--- | Abbreviations
---
---   Stmt = Statement, Expr = Expression, Fn = Function, Decl = Declaration
---
 
 import Language.JavaScript.NonEmptyList
 
