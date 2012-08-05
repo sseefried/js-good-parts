@@ -85,7 +85,7 @@ instance Pretty Number where
 instance PrettyPrec Number -- default
 
 instance Pretty VarStmt where
-  pretty (VarStmt varDecls) = sepWith' (comma <+> empty) varDecls
+  pretty (VarStmt varDecls) = text "var" <+> sepWith' (comma <+> empty) varDecls <> semi
 
 instance PrettyPrec VarStmt -- default
 
