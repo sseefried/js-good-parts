@@ -272,7 +272,7 @@ instance PrettyPrec Refinement -- default
 instance Pretty Lit             where
   pretty lit = case lit of
     LitNumber n   -> pretty n
-    LitBool   b   -> pretty b
+    LitBool   b   -> if b then text "true" else text "false"
     LitString s   -> pretty s
     LitObject o   -> pretty o
     LitArray  a   -> pretty a
