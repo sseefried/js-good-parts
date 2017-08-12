@@ -7,7 +7,7 @@ module Language.JavaScript.Pretty (
 -- System libraries
 import Text.PrettyPrint.Leijen
 import Text.PrettyPrint.Leijen.PrettyPrec
-import Prelude hiding (GT, LT)
+import Prelude hiding (GT, LT, (<$>))
 
 -- friends
 import Language.JavaScript.AST
