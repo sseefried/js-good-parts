@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
+
 --
 -- Module: Language.Javascript.AST
 -- Author: Sean Seefried
@@ -131,18 +132,54 @@ module Language.JavaScript.AST (
   FnLit(..), FnBody(..), Program(..)
 ) where
 
-import Language.JavaScript.NonEmptyList
+import qualified Data.List.NonEmpty as NE
+import Data.Char
 
-
-data Name = Name { unName :: String }
+newtype Name = Name { unName :: String }
+  deriving Show
 
 --
 -- | 'jsName' is the only way you can create a Name
 --
 name :: String -> Either String Name
-name = Right . Name -- FIXME: Return Left on error.
+name = validate
+  where
+  begin c = c == '$' || c == '_' || case generalCategory c of
+    UppercaseLetter -> True
+    LowercaseLetter -> True
+    TitlecaseLetter -> True
+    ModifierLetter -> True
+    OtherLetter -> True
+    LetterNumber -> True
+    _ -> False
+  rest c = case generalCategory c of
+    UppercaseLetter -> True
+    LowercaseLetter -> True
+    TitlecaseLetter -> True
+    ModifierLetter -> True
+    OtherLetter -> True
+    LetterNumber -> True
+    NonSpacingMark -> True
+    SpacingCombiningMark -> True
+    DecimalNumber -> True
+    ConnectorPunctuation -> True
+    _ -> False
+  validate "" = Left "empty name"
+  validate nm@(c:cs) = 
+    if any (==nm) reserved
+    then Left ("Identifier is a reserved keyword: " <> nm)
+    else 
+      if begin c
+      then 
+        if all rest cs
+        then Right (Name nm)
+        else Left ("Invalid character after starting character for the identifier: " <> nm)
+      else Left ("Invalid starting character for the identifier: " <> ('(' : c : ')' : cs))
 
-data JSString = JSString { unString :: String }
+reserved :: [String]
+reserved = ["if","in","for","let","new","try","var","case","else","enum","eval","false","null","this","true","void","with","break","catch","class","const","super","throw","while","yield","delete","export","import","public","return","static","switch","typeof","default","extends","finally","package","private","continue","debugger","function","arguments","interface","protected","implements","instanceof"] 
+
+newtype JSString = JSString { unString :: String }
 
 --
 -- | The only way you can create a Javascript string.
@@ -162,7 +199,9 @@ newtype Number = Number Double -- 64 bit floating point number
 --
 -- e.g. @var x = 1, y;@
 --
-data VarStmt = VarStmt (NonEmptyList VarDecl)
+data VarStmt 
+  = VarStmt (NE.NonEmpty VarDecl)
+  | ConstStmt VarDecl
 
 --
 -- | Concrete syntax:
@@ -224,9 +263,10 @@ data DisruptiveStmt
 --
 -- 3. @if (x > 0) { y = 20; } else if ( x > 10) { y = 30; } else { y = 10; }@
 --
-data IfStmt = IfStmt Expr
-                                   [Stmt]
-                                   (Maybe (Either [Stmt] IfStmt))
+data IfStmt 
+  = IfStmt Expr
+      [Stmt]
+      (Maybe (Either [Stmt] IfStmt))
 
 
 --
@@ -271,11 +311,11 @@ data IfStmt = IfStmt Expr
 --
 data SwitchStmt
   = SwitchStmtSingleCase Expr CaseClause
-  | SwitchStmt           Expr
-                                (NonEmptyList CaseAndDisruptive)
-                                --  ^ non-default case clauses
-                                [Stmt]
-                                -- ^ default clause statements
+  | SwitchStmt Expr
+      (NE.NonEmpty CaseAndDisruptive)
+      --  ^ non-default case clauses
+      [Stmt]
+      -- ^ default clause statements
 
 --
 -- | A case clause followed by a disruptive statement
@@ -354,14 +394,14 @@ data CaseClause = CaseClause Expr [Stmt]
 --
 data ForStmt
   = ForStmtCStyle
-       (Maybe ExprStmt)
-       (Maybe Expr)
-       (Maybe ExprStmt)
-       [Stmt]
-    | ForStmtInStyle
-       Name
-       Expr
-       [Stmt]
+      (Maybe ExprStmt)
+      (Maybe Expr)
+      (Maybe ExprStmt)
+      [Stmt]
+  | ForStmtInStyle
+      Name
+      Expr
+      [Stmt]
 
 --
 -- | Concrete syntax:
@@ -389,7 +429,7 @@ data TryStmt = TryStmt [Stmt] Name [Stmt]
 --
 -- @throw \<Expr\>;@
 --
-data ThrowStmt = ThrowStmt Expr
+newtype ThrowStmt = ThrowStmt Expr
 
 --
 -- | Concrete syntax:
@@ -402,7 +442,7 @@ data ThrowStmt = ThrowStmt Expr
 --
 --   2. @return 2 + x;@
 --
-data ReturnStmt = ReturnStmt (Maybe Expr)
+newtype ReturnStmt = ReturnStmt (Maybe Expr)
 
 --
 -- | Concrete syntax:
@@ -415,7 +455,7 @@ data ReturnStmt = ReturnStmt (Maybe Expr)
 --
 -- 2. @break some_label;@
 --
-data BreakStmt = BreakStmt (Maybe Name)
+newtype BreakStmt = BreakStmt (Maybe Name)
 
 --
 -- | Concrete syntax:
@@ -427,7 +467,7 @@ data BreakStmt = BreakStmt (Maybe Name)
 -- @delete \<Expr\> \<Refinement\>@
 --
 data ExprStmt
-  = ESApply (NonEmptyList LValue) RValue
+  = ESApply (NE.NonEmpty LValue) RValue
   | ESDelete Expr Refinement
 
 --
@@ -486,30 +526,23 @@ data RValue
   = RVAssign    Expr
   | RVAddAssign Expr
   | RVSubAssign Expr
-  | RVInvoke    (NonEmptyList Invocation)
+  | RVInvoke    (NE.NonEmpty Invocation)
 
 data Expr 
   = ExprLit    Lit -- ^ @\<Lit\>@
   | ExprName       Name    -- ^ @\<Name\>@
-
   -- | @\<PrefixOperator> \<Expr\>@
   | ExprPrefix     PrefixOperator Expr
-
   -- | @\<Expr\> \<InfixOperator\> \<Expr\>@
   | ExprInfix      InfixOperator  Expr Expr
-
   -- | @\<Expr\> ? \<Expr\> : \<Expr\>@
   | ExprTernary    Expr     Expr Expr
-
   -- | @\<Expr\>\<Invocation\>@
   | ExprInvocation Expr     Invocation
-
   -- | @\<Expr\>\<Refinement\>@
   | ExprRefinement Expr     Refinement
-
   -- | new @\<Expr\>\<Invocation\>@
   | ExprNew        Expr     Invocation
-
   -- | delete @\<Expr\>\<Refinement\>@
   | ExprDelete     Expr     Refinement
 
@@ -520,19 +553,19 @@ data PrefixOperator
   | Not      -- ^ @!@
 
 data InfixOperator
-  = Mul  -- ^ @*@
-  | Div  -- ^ @/@
-  | Mod  -- ^ @%@
-  | Add  -- ^ @+@
-  | Sub  -- ^ @-@
-  | GTE  -- ^ @>=@
-  | LTE  -- ^ @<=@
-  | GT   -- ^ @>@
-  | LT   -- ^ @<@
-  | Eq   -- ^ @===@
-  | NotEq-- ^ @!==@
-  | Or   -- ^ @||@
-  | And  -- ^ @&&@
+  = Mul   -- ^ @*@
+  | Div   -- ^ @/@
+  | Mod   -- ^ @%@
+  | Add   -- ^ @+@
+  | Sub   -- ^ @-@
+  | GTE   -- ^ @>=@
+  | LTE   -- ^ @<=@
+  | GT    -- ^ @>@
+  | LT    -- ^ @<@
+  | Eq    -- ^ @===@
+  | NotEq -- ^ @!==@
+  | Or    -- ^ @||@
+  | And   -- ^ @&&@
 
 --
 -- | Concrete syntax:
@@ -547,7 +580,7 @@ data InfixOperator
 --
 -- 3. @(x,z,y)@
 --
-data Invocation = Invocation [Expr]
+newtype Invocation = Invocation [Expr]
 
 -- | Concrete syntax:
 --
@@ -573,7 +606,6 @@ data Refinement
 --   are used throughout the book.
 --
 
-
 data Lit
   = LitNumber   Number      -- ^ @\<Number\>@
   | LitBool     Bool        -- ^ @\<true | false\>@
@@ -592,7 +624,7 @@ data Lit
 --
 -- @\{\<ObjectField\> \(, \<ObjectField\> \)*\}@    -- one or more fields
 --
-data ObjectLit = ObjectLit [ObjectField]
+newtype ObjectLit = ObjectLit [ObjectField]
 
 --
 -- | Concrete syntax:
@@ -620,7 +652,7 @@ data ObjectField  = ObjectField (Either Name String) Expr
 --
 -- @[\<Expr\> \(, \<Expr\>*\) ]@ -- non empty array
 --
-data ArrayLit = ArrayLit [Expr]
+newtype ArrayLit = ArrayLit [Expr]
 
 --
 -- | Concrete syntax:

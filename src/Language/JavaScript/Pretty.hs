@@ -8,10 +8,11 @@ module Language.JavaScript.Pretty (
 import Text.PrettyPrint.Leijen
 import Text.PrettyPrint.Leijen.PrettyPrec
 import Prelude hiding (GT, LT, (<$>))
+import Numeric (showFFloat)
+import qualified Data.List.NonEmpty as NE
 
 -- friends
 import Language.JavaScript.AST
-import Language.JavaScript.NonEmptyList
 
 -- FIXME: This will be a little tricky to get right.
 -- If the string contains double quotes you need to escape.
@@ -28,8 +29,8 @@ sepWith s = encloseSep empty empty s . map pretty
 endWith :: Pretty a => Doc -> [a] -> Doc
 endWith s xs = sepWith s xs <> s
 
-sepWith' :: Pretty a => Doc -> NonEmptyList a -> Doc
-sepWith' s = encloseSep empty empty s . map pretty . toList
+sepWith' :: Pretty a => Doc -> NE.NonEmpty a -> Doc
+sepWith' s = encloseSep empty empty s . map pretty . NE.toList
 
 prettyBlock :: Pretty a => [a] -> Doc
 prettyBlock stmts = lbrace <$> indent 2 (endWith (semi <$> empty) stmts) <$> rbrace
@@ -80,12 +81,13 @@ infixOpInfo op = case op of
 -----------------------------------------------------------------------
 
 instance Pretty Number where
-  pretty (Number n) = pretty n -- FIXME: Make sure this always produce valid Javascript numbers.
+  pretty (Number n) = text (showFFloat Nothing n "")
 
 instance PrettyPrec Number -- default
 
 instance Pretty VarStmt where
   pretty (VarStmt varDecls) = text "var" <+> sepWith' (comma <+> empty) varDecls <> semi
+  pretty (ConstStmt constDecls) = text "const" <+> pretty constDecls <> semi
 
 instance PrettyPrec VarStmt -- default
 
@@ -136,7 +138,7 @@ instance Pretty SwitchStmt where
     text "switch" <+> parens (pretty cond) <+> lbrace <$> pretty caseClause <$> rbrace
   pretty (SwitchStmt cond cds stmts) =
     text "switch" <+> parens (pretty cond) <+> lbrace <$>
-      indent 2 (vcat (toList . fmap pretty $ cds) <$>
+      indent 2 (vcat (NE.toList . fmap pretty $ cds) <$>
                (text "default:" <$>
                   indent 2 (endWith semi stmts))) <$>
     rbrace
@@ -196,7 +198,7 @@ instance Pretty ReturnStmt where
 
 instance PrettyPrec ReturnStmt -- default
 
-instance Pretty BreakStmt      where
+instance Pretty BreakStmt where
   pretty (BreakStmt mbExp) = case mbExp of
     Nothing  -> text "break;"
     Just exp_ -> text "break" <+> pretty exp_ <> semi
@@ -223,7 +225,7 @@ instance Pretty RValue              where
     RVAssign e    -> text "="  <+> pretty e
     RVAddAssign e -> text "+=" <+> pretty e
     RVSubAssign e -> text "-=" <+> pretty e
-    RVInvoke invs -> hcat . toList . fmap pretty $ invs
+    RVInvoke invs -> hcat . NE.toList . fmap pretty $ invs
 
 instance PrettyPrec RValue -- default
 
@@ -258,18 +260,18 @@ instance Pretty InfixOperator where
 instance PrettyPrec InfixOperator where
   prettyPrec = error "we never print an operator by itself"
 
-instance Pretty Invocation          where
+instance Pretty Invocation where
   pretty (Invocation es) = lparen <> sepWith (comma <+> empty) es <> rparen
 
 instance PrettyPrec Invocation -- default
 
-instance Pretty Refinement          where
+instance Pretty Refinement where
   pretty (Property nm) = char '.' <> pretty nm
   pretty (Subscript e)   = char '[' <> pretty e <> char ']'
 
 instance PrettyPrec Refinement -- default
 
-instance Pretty Lit             where
+instance Pretty Lit where
   pretty lit = case lit of
     LitNumber n   -> pretty n
     LitBool   b   -> if b then text "true" else text "false"
@@ -293,12 +295,12 @@ instance Pretty ObjectField         where
 
 instance PrettyPrec ObjectField -- default
 
-instance Pretty ArrayLit        where
+instance Pretty ArrayLit where
   pretty (ArrayLit es) = lbracket <> sepWith (comma <+> empty) es <> rbracket
 
 instance PrettyPrec ArrayLit -- default
 
-instance Pretty FnLit     where
+instance Pretty FnLit where
   pretty (FnLit mbName params body) =
     text "function" `join` (parens . hcat . map pretty $ params) <+> pretty body
       where join = case mbName of
@@ -307,7 +309,7 @@ instance Pretty FnLit     where
 
 instance PrettyPrec FnLit -- default
 
-instance Pretty FnBody        where
+instance Pretty FnBody where
   pretty (FnBody varStmts stmts) =
     lbrace <$>
     indent 2 (sepWith (semi <$> empty) (map pretty varStmts ++ map pretty stmts)) <$>
@@ -320,24 +322,21 @@ instance Pretty Program where
 
 ------------------------
 
-{-
+-- {-
 test1 = add (n 1) (add (n 2) (add (add (n 3) (n 4)) (n 5)))
 
 test2  = add (n 1) (mul (n 2) (n 3))
 test2' = ((n 1) `add` (n 2)) `mul` (n 3)
 
 test3 :: ExprStmt
-test3 = case jsName "x" of
+test3 = case name "x" of
   Right nm ->
-    case jsName "y" of
-      Right nm' -> ESApply ((LValue nm' []) <:> singleton (LValue nm []))
+    case name "y" of
+      Right nm' -> ESApply ((LValue nm' []) NE.<| pure (LValue nm []))
                      (RVAssign test2')
-
 
 test4 :: Stmt
 test4 = StmtExpr test3
-
--- test4a = Stmt
 
 test5 :: Program
 test5 = Program [] [test4, test4]
@@ -348,4 +347,4 @@ test6 = FnLit Nothing [] (FnBody [] [test4])
 add e e' = ExprInfix Add e e'
 mul e e' = ExprInfix Mul e e'
 n x = ExprLit (LitNumber (Number x))
--}
+-- -}
