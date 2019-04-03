@@ -282,12 +282,12 @@ instance Pretty Lit where
 
 instance PrettyPrec Lit -- default
 
-instance Pretty ObjectLit       where
+instance Pretty ObjectLit where
   pretty (ObjectLit fields) = lbrace <> sepWith (comma <$> empty) fields <> rbrace
 
 instance PrettyPrec ObjectLit -- default
 
-instance Pretty ObjectField         where
+instance Pretty ObjectField where
   pretty (ObjectField eitherNameString e) = ppEitherNameString <> colon <+> pretty e
     where ppEitherNameString = case eitherNameString of
                  Left nm -> pretty nm
