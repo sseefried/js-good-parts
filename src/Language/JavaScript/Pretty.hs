@@ -214,14 +214,14 @@ instance Pretty ExprStmt where
 
 instance PrettyPrec ExprStmt -- default
 
-instance Pretty LValue              where
+instance Pretty LValue where
   pretty (LValue nm invsAndRefines) = pretty nm <> (hcat . map ppIR $ invsAndRefines)
     where
       ppIR (invs, refine) = (hcat . map pretty $ invs) <> pretty refine
 
 instance PrettyPrec LValue -- default
 
-instance Pretty RValue              where
+instance Pretty RValue where
   pretty rvalue = case rvalue of
     RVAssign e    -> text "="  <+> pretty e
     RVAddAssign e -> text "+=" <+> pretty e
@@ -230,7 +230,7 @@ instance Pretty RValue              where
 
 instance PrettyPrec RValue -- default
 
-instance Pretty Expr          where
+instance Pretty Expr where
   pretty = prettyPrec 0
 
 instance PrettyPrec Expr where
@@ -246,7 +246,7 @@ instance PrettyPrec Expr where
     ExprNew e i'              -> text "new" <+> pretty e <> pretty i'
     ExprDelete e r           -> text "new" <+> pretty e <> pretty r
 
-instance Pretty PrefixOperator      where
+instance Pretty PrefixOperator where
   pretty op = case op of
     TypeOf   -> text "typeof" <+> empty
     ToNumber -> char '+'
@@ -313,7 +313,7 @@ instance PrettyPrec FnLit -- default
 instance Pretty FnBody where
   pretty (FnBody varStmts stmts) =
     lbrace <$>
-    indent 2 (sepWith (semi <$> empty) (map pretty varStmts ++ map pretty stmts)) <$>
+    indent 2 (sepWith empty (fmap pretty varStmts <> fmap pretty stmts)) <$>
     rbrace
 
 instance PrettyPrec FnBody -- default
@@ -343,7 +343,7 @@ test5 :: Program
 test5 = Program [] [test4, test4]
 
 test6 :: FnLit
-test6 = FnLit Nothing [] (FnBody [] [test4])
+test6 = FnLit Nothing [] (FnBody [] [test4,test4, StmtExpr $ ESExpr $ n 2])
 
 add e e' = ExprInfix Add e e'
 mul e e' = ExprInfix Mul e e'
