@@ -323,6 +323,7 @@ instance Pretty Program where
 
 ------------------------
 
+{-
 test1 = add (n 1) (add (n 2) (add (add (n 3) (n 4)) (n 5)))
 
 test2  = add (n 1) (mul (n 2) (n 3))
@@ -347,3 +348,4 @@ test6 = FnLit Nothing [] (FnBody [] [test4,test4, StmtExpr $ ESExpr $ n 2])
 add e e' = ExprInfix Add e e'
 mul e e' = ExprInfix Mul e e'
 n x = ExprLit (LitNumber (Number x))
+-}
