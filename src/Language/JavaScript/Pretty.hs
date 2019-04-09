@@ -33,7 +33,7 @@ sepWith' :: Pretty a => Doc -> NE.NonEmpty a -> Doc
 sepWith' s = encloseSep empty empty s . map pretty . NE.toList
 
 prettyBlock :: Pretty a => [a] -> Doc
-prettyBlock stmts = lbrace <$> indent 2 (endWith (semi <$> empty) stmts) <$> rbrace
+prettyBlock stmts = lbrace <$> indent 2 (endWith empty stmts) <$> rbrace
 
 ------------------------------------------------------------------------
 --
@@ -99,7 +99,7 @@ instance PrettyPrec VarDecl -- default
 
 instance Pretty Stmt where
   pretty stmt = case stmt of
-    (StmtExpr  es)  -> pretty es <> semi
+    (StmtExpr  es)  -> pretty es
     (StmtDisruptive  ds)  -> pretty ds
     (StmtTry         ts)  -> pretty ts
     (StmtIf          is)  -> pretty is
@@ -207,9 +207,9 @@ instance PrettyPrec BreakStmt -- default
 
 instance Pretty ExprStmt where
   pretty (ESApply lvalues rvalue) =
-    sepWith' (space <> text "=" <> space) lvalues <+> pretty rvalue
+    sepWith' (space <> text "=" <> space) lvalues <+> pretty rvalue <> semi
   pretty (ESDelete exp_ refine) =
-    text "delete" <+> pretty exp_ <> pretty refine
+    text "delete" <+> pretty exp_ <> pretty refine <> semi
   pretty (ESExpr exp_) = pretty exp_
 
 instance PrettyPrec ExprStmt -- default
