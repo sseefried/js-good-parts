@@ -33,7 +33,7 @@ sepWith' :: Pretty a => Doc -> NE.NonEmpty a -> Doc
 sepWith' s = encloseSep empty empty s . map pretty . NE.toList
 
 prettyBlock :: Pretty a => [a] -> Doc
-prettyBlock stmts = lbrace <$> indent 2 (endWith empty stmts) <$> rbrace
+prettyBlock stmts = lbrace <$> indent 2 (endWith (semi <$> empty) stmts) <$> rbrace
 
 ------------------------------------------------------------------------
 --
