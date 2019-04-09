@@ -162,7 +162,7 @@ instance Pretty ForStmt where
     text "for" <+> parens (pretty init_ <> semi <+> pretty cond <> semi <+>
                            pretty incr) <+> prettyBlock stmts
   pretty (ForStmtInStyle nm exp' stmts) =
-    text "for" <+> parens (pretty nm <+> text "in" <+> pretty exp') <+> prettyBlock stmts
+    text "for" <+> parens (text "let" <+> pretty nm <+> text "in" <+> pretty exp') <+> prettyBlock stmts
 
 instance PrettyPrec ForStmt -- default
 
