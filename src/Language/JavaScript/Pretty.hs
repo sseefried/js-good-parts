@@ -210,6 +210,7 @@ instance Pretty ExprStmt where
     sepWith' (space <> text "=" <> space) lvalues <+> pretty rvalue
   pretty (ESDelete exp_ refine) =
     text "delete" <+> pretty exp_ <> pretty refine
+  pretty (ESExpr exp_) = pretty exp_
 
 instance PrettyPrec ExprStmt -- default
 

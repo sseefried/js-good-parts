@@ -469,6 +469,7 @@ newtype BreakStmt = BreakStmt (Maybe Name)
 data ExprStmt
   = ESApply (NE.NonEmpty LValue) RValue
   | ESDelete Expr Refinement
+  | ESExpr Expr
 
 --
 -- | Concrete syntax:
